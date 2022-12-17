@@ -1,0 +1,38 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+	<PropertyGroup Label="Configuration" Condition="'$(Configuration)|$(TargetFramework)|$(Platform)'=='Debug|net45|AnyCPU'">
+	  <OutputType>Library</OutputType>
+	</PropertyGroup>
+	<PropertyGroup>
+		<Authors>Syroot</Authors>
+		<AssemblyName>Syroot.NintenTools.NSW.Bntx</AssemblyName>
+		<AssemblyTitle>NintenTools.Bfres</AssemblyTitle>
+		<Copyright>(c) Syroot, licensed under MIT</Copyright>
+		<Description>.NET library for loading and saving the Nintendo BFRES graphics archive format.</Description>
+		<GenerateDocumentationFile>true</GenerateDocumentationFile>
+		<PackageIconUrl>https://raw.githubusercontent.com/Syroot/NintenTools.Bfres/master/res/Logo.png</PackageIconUrl>
+		<PackageId>Syroot.NintenTools.Bfres</PackageId>
+		<PackageLicenseUrl>https://raw.githubusercontent.com/Syroot/NintenTools.Bfres/master/LICENSE</PackageLicenseUrl>
+		<PackageProjectUrl>https://github.com/Syroot/NintenTools.Bfres</PackageProjectUrl>
+		<PackageReleaseNotes>Fix loading Single AnimCurve keys consisting of more than one element.</PackageReleaseNotes>
+		<PackageTags>bfres;cafe;nintendo;nw4f;wiiu</PackageTags>
+		<RepositoryType>git</RepositoryType>
+		<RepositoryUrl>https://github.com/Syroot/NintenTools.Bfres</RepositoryUrl>
+		<TargetFrameworks>net45;netstandard2.0</TargetFrameworks>
+		<VersionPrefix>1.2.3</VersionPrefix>
+		<ApplicationIcon />
+		<OutputTypeEx>library</OutputTypeEx>
+		<StartupObject />
+		<RootNamespace>Syroot.NintenTools.NSW.Bntx</RootNamespace>
+	</PropertyGroup>
+	<ItemGroup>
+	  <Compile Remove="Common\UserData_Data.cs" />
+	</ItemGroup>
+	<ItemGroup>
+		<PackageReference Include="Syroot.IO.BinaryData" Version="2.0.1" />
+		<PackageReference Include="Syroot.Maths" Version="1.5.0" />
+	</ItemGroup>
+	<ItemGroup Condition="'$(TargetFramework)' == 'net451'">
+		<Reference Include="System" />
+		<Reference Include="Microsoft.CSharp" />
+	</ItemGroup>
+</Project>
