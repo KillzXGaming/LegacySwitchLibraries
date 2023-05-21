@@ -158,9 +158,9 @@ namespace Syroot.NintenTools.NSW.Bfres
             Name = loader.LoadString();
             Path = loader.LoadString();
             BindModel = loader.Load<Model>();
-            long BindIndicesOffset = loader.ReadInt64();
-            long VertexShapeAnimsArrayOffset = loader.ReadInt64();
-            long UserDataOffset = loader.ReadInt64();
+            long BindIndicesOffset = loader.ReadOffset();
+            long VertexShapeAnimsArrayOffset = loader.ReadOffset();
+            long UserDataOffset = loader.ReadOffset();
             UserDataDict = loader.LoadDict();
 
             ushort numUserData = 0;

@@ -234,13 +234,13 @@ namespace Syroot.NintenTools.NSW.Bfres
             Name = loader.LoadString();
             Path = loader.LoadString();
             BindModel = loader.Load<Model>(true);
-            long BindIndicesOffset = loader.ReadInt64();
-            long PerMaterialAnimationArrayOffset = loader.ReadInt64();
-            long unk = loader.ReadInt64(); //Empty section. Maybe set at runtime
-            long TextureNameArrayOffset = loader.ReadInt64();
-            long UserDataOffset = loader.ReadInt64();
+            long BindIndicesOffset = loader.ReadOffset();
+            long PerMaterialAnimationArrayOffset = loader.ReadOffset();
+            long unk = loader.ReadOffset(); //Empty section. Maybe set at runtime
+            long TextureNameArrayOffset = loader.ReadOffset();
+            long UserDataOffset = loader.ReadOffset();
             UserDataDict = loader.LoadDict();
-            long TextureBindArrayOffset = loader.ReadInt64();
+            long TextureBindArrayOffset = loader.ReadOffset();
 
             if (loader.ResFile.VersionMajor2 < 9)
                 Flags = loader.ReadEnum<MaterialAnimFlags>(true);

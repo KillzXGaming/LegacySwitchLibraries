@@ -303,6 +303,8 @@ namespace Syroot.NintenTools.NSW.Bfres
             {
                 long unk1 = loader.ReadInt64();
                 long unk2 = loader.ReadInt64();
+                if (unk1 != 0 || unk2 != 0)
+                    throw new Exception();
             }
             _flags = loader.ReadUInt32();
             BeginRotate = loader.ReadByte();

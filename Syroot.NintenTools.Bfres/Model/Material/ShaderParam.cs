@@ -77,7 +77,7 @@ namespace Syroot.NintenTools.NSW.Bfres
 
         void IResData.Load(ResFileLoader loader)
         {
-            long callbackPointer = loader.ReadInt64();
+            long callbackPointer = loader.ReadOffset();
             Name                 = loader.LoadString();
             Type                 = loader.ReadEnum<ShaderParamType>(true);
             byte sizData         = loader.ReadByte();

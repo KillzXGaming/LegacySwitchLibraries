@@ -87,9 +87,9 @@ namespace Syroot.NintenTools.NSW.Bfres
             else
                 loader.LoadHeaderBlock();
             Name = loader.LoadString();
-            long CurveArrayOffset = loader.ReadInt64();
+            long CurveArrayOffset = loader.ReadOffset();
             BaseData = loader.LoadCustom(() => new CameraAnimData(loader));
-            long UserDataOffset = loader.ReadInt64();
+            long UserDataOffset = loader.ReadOffset();
             UserDataDict = loader.LoadDict();
 
             ushort numUserData = 0;

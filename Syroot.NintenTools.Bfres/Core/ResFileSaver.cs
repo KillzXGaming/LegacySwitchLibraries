@@ -469,7 +469,7 @@ namespace Syroot.NintenTools.NSW.Bfres.Core
             ((IResData)Model).Save(this);
             WriteModel(Model);
             WriteModelBlock(Model);
-     
+
             WriteStrings();
 
             WriteOffset(_ofsBufferInfoPosition);
@@ -490,7 +490,7 @@ namespace Syroot.NintenTools.NSW.Bfres.Core
             long _ofsBufferInfoPosition = SaveOffset(); //Reserve buffer info pointer
 
             // Update Shape instances.
-    //        Shape.VertexBuffer = Model.VertexBuffers[Shape.VertexBufferIndex];
+            //        Shape.VertexBuffer = Model.VertexBuffers[Shape.VertexBufferIndex];
 
 
             ((IResData)Shape).Save(this);
@@ -566,8 +566,8 @@ namespace Syroot.NintenTools.NSW.Bfres.Core
             }
             if (ResFile.MaterialAnims.Count > 0)
             {
-          //      SaveRelocateEntryToSection(Position + 16, 2, (uint)ResFile.MaterialAnims.Count, 13, Section1, "Material Animation"); //      <------------ Entry Set
-        //        SaveRelocateEntryToSection(Position + 40, 6, (uint)ResFile.MaterialAnims.Count, 9, Section1, "Material Animation"); //      <------------ Entry Set
+                //      SaveRelocateEntryToSection(Position + 16, 2, (uint)ResFile.MaterialAnims.Count, 13, Section1, "Material Animation"); //      <------------ Entry Set
+                //        SaveRelocateEntryToSection(Position + 40, 6, (uint)ResFile.MaterialAnims.Count, 9, Section1, "Material Animation"); //      <------------ Entry Set
                 WriteOffset(ResFile.MaterialAnimationOffset);
                 foreach (MaterialAnim matanim in ResFile.MaterialAnims)
                     ((IResData)matanim).Save(this);
@@ -586,7 +586,7 @@ namespace Syroot.NintenTools.NSW.Bfres.Core
                 }
 
                 WriteOffset(ResFile.BoneVisAnimationOffset);
-                foreach (VisibilityAnim bnanim in ResFile.BoneVisibilityAnims)  
+                foreach (VisibilityAnim bnanim in ResFile.BoneVisibilityAnims)
                     ((IResData)bnanim).Save(this);
             }
             if (ResFile.ShapeAnims.Count > 0)
@@ -696,11 +696,11 @@ namespace Syroot.NintenTools.NSW.Bfres.Core
                 WriteMaterialAnimations(matanim);
             foreach (VisibilityAnim bnanim in ResFile.BoneVisibilityAnims)
                 WriteBoneVisabiltyAnimations(bnanim);
-            foreach (ShapeAnim shpanim in ResFile.ShapeAnims)        
+            foreach (ShapeAnim shpanim in ResFile.ShapeAnims)
                 WriteShapeAnimations(shpanim);
             foreach (SceneAnim scnanim in ResFile.SceneAnims)
                 WriteSceneAnimations(scnanim);
-            
+
 
 
             WriteStrings();
@@ -808,7 +808,9 @@ namespace Syroot.NintenTools.NSW.Bfres.Core
         {
             if (mdl.Skeleton.Bones.Count > 0)
             {
-                if (ResFile.VersionMajor2 >= 8)
+                if (ResFile.VersionMajor2 >= 10)
+                    SaveRelocateEntryToSection(Position, 3, (uint)mdl.Skeleton.Bones.Count, 8, Section1, "Bone array"); //      <------------ Entry Set
+                else if (ResFile.VersionMajor2 == 8 || ResFile.VersionMajor2 == 9)
                     SaveRelocateEntryToSection(Position, 3, (uint)mdl.Skeleton.Bones.Count, 9, Section1, "Bone array"); //      <------------ Entry Set
                 else
                     SaveRelocateEntryToSection(Position, 3, (uint)mdl.Skeleton.Bones.Count, 7, Section1, "Bone array"); //      <------------ Entry Set
@@ -867,16 +869,20 @@ namespace Syroot.NintenTools.NSW.Bfres.Core
                 skl.WriteMatrices(this);
             }
 
-            if (skl.BoneDict.Count > 0)
-            {
-                WriteOffset(skl.PosBoneDictOffset);
-                ((IResData)skl.BoneDict).Save(this);
-            }
             if (skl.userIndices?.Length > 0)
             {
+                Align(8);
                 WriteOffset(skl.PosUserPointer);
                 Write(skl.userIndices);
             }
+
+            if (skl.BoneDict.Count > 0)
+            {
+                Align(8);
+                WriteOffset(skl.PosBoneDictOffset);
+                ((IResData)skl.BoneDict).Save(this);
+            }
+
             if (skl.Bones.Count > 0)
             {
                 foreach (Bone bn in skl.Bones)
@@ -1378,6 +1384,16 @@ namespace Syroot.NintenTools.NSW.Bfres.Core
             if (this.ResFile.VersionMajor2 >= 10)
             {
                 SaveEntries();
+
+                if (mat.UserDatas.Count > 0)
+                    SaveUserData(mat.UserDatas, mat.PosUserDataMaterialOffset);
+                if (mat.UserDataDict.Count > 0)
+                {
+                    WriteOffset(mat.PosUserDataDictMaterialOffset);
+                    ((IResData)mat.UserDataDict).Save(this);
+                    SaveUserDataData(mat.UserDatas);
+                    Align(8);
+                }
                 return;
             }
 
@@ -1620,6 +1636,8 @@ namespace Syroot.NintenTools.NSW.Bfres.Core
 
         internal void WriteOffset(long offset)
         {
+            //Align(8);
+
             long pos = Position;
             using (TemporarySeek(offset, SeekOrigin.Begin))
             {
@@ -1823,6 +1841,9 @@ namespace Syroot.NintenTools.NSW.Bfres.Core
         [DebuggerStepThrough]
         internal void SaveRelocateEntryToSection(long pos, uint OffsetCount, uint StructCount, uint PaddingCount, int SectionNumber, string Hint)
         {
+            if (StructCount == 0 || OffsetCount == 0)
+                return;
+
             if (StructCount <= 0)
                 throw new Exception("Invalid struct count. Should be greater than 0! " + StructCount);
 

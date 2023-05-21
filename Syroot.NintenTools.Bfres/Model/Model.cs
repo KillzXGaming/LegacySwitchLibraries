@@ -267,13 +267,13 @@ namespace Syroot.NintenTools.NSW.Bfres
                 loader.ReadOffset(); //padding?
 
             MaterialDict = loader.LoadDict();
+            long UserDataOffset       = loader.ReadOffset();
+            UserDataDict              = loader.LoadDict();
+
             if (loader.ResFile.VersionMajor2 >= 10)
                 loader.ReadOffset(); //padding?
 
-
-            long UserDataOffset       = loader.ReadOffset();
-            UserDataDict              = loader.LoadDict();
-            long UserPointer          = loader.ReadOffset();
+            long UserPointer          = loader.ReadInt64();
 
             ushort numVertexBuffer    = loader.ReadUInt16();
             ushort numShape           = loader.ReadUInt16();
@@ -317,7 +317,13 @@ namespace Syroot.NintenTools.NSW.Bfres
             else
                 saver.SaveHeaderBlock();
 
-            saver.SaveRelocateEntryToSection(saver.Position, 10, 1, 0, ResFileSaver.Section1, "Model"); //      <------------ Entry Set
+            if (saver.ResFile.VersionMajor2 == 9)
+                saver.SaveRelocateEntryToSection(saver.Position, 10, 1, 0, ResFileSaver.Section1, "Model");
+            else if (saver.ResFile.VersionMajor2 >= 10)
+                saver.SaveRelocateEntryToSection(saver.Position, 12, 1, 0, ResFileSaver.Section1, "Model"); 
+            else
+                saver.SaveRelocateEntryToSection(saver.Position, 10, 1, 0, ResFileSaver.Section1, "Model"); 
+
             saver.SaveString(Name);
             saver.SaveString(Path);
             SkeletonOffset = saver.SaveOffset();
@@ -328,11 +334,12 @@ namespace Syroot.NintenTools.NSW.Bfres
             if (saver.ResFile.VersionMajor2 == 9)
                 saver.Write(0L);
             MaterialsDictOffset = saver.SaveOffset();
+            PosUserDataOffset = saver.SaveOffset();
+            PosUserDataDictOffset = saver.SaveOffset();
+
             if (saver.ResFile.VersionMajor2 >= 10)
                 saver.Write(0L); //padding?
 
-            PosUserDataOffset = saver.SaveOffset();
-            PosUserDataDictOffset = saver.SaveOffset();
             saver.Write(0L);
             saver.Write((ushort)VertexBuffers.Count);
             saver.Write((ushort)Shapes.Count);

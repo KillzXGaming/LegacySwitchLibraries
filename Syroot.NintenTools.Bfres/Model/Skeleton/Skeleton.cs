@@ -179,7 +179,7 @@ namespace Syroot.NintenTools.NSW.Bfres
                 loader.Seek(8);
             }
 
-            long userPointer                = loader.ReadInt64();
+            long userPointer                = loader.ReadOffset();
             if (loader.ResFile.VersionMajor2 < 9)
                 _flags = loader.ReadUInt32();
             ushort numBone                  = loader.ReadUInt16();
@@ -233,6 +233,8 @@ namespace Syroot.NintenTools.NSW.Bfres
             {
                 saver.Seek(8);
             }
+
+            saver.SaveRelocateEntryToSection(saver.Position, 1, 1, 0, ResFileSaver.Section1, "FSKL UserPointer");
             PosUserPointer = saver.SaveOffset();// UserPointer
 
             if (saver.ResFile.VersionMajor2 < 9)

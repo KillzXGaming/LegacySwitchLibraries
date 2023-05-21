@@ -143,9 +143,9 @@ namespace Syroot.NintenTools.NSW.Bfres
             else
                 loader.LoadHeaderBlock();
             Name = loader.LoadString();
-            long CurveArrayOffset = loader.ReadInt64();
+            long CurveArrayOffset = loader.ReadOffset();
             BaseData = loader.LoadCustom(() => new LightAnimData(loader, AnimatedFields));
-            long UserDataOffset = loader.ReadInt64();
+            long UserDataOffset = loader.ReadOffset();
             UserDataDict = loader.LoadDict();
             LightTypeName = loader.LoadString();
             DistanceAttnFuncName = loader.LoadString();

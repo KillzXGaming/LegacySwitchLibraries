@@ -17,6 +17,8 @@ namespace Syroot.NintenTools.NSW.Bfres.Core
 
         private IDictionary<uint, IResData> _dataMap;
 
+        internal List<long> RelocatedPointers = new List<long>();
+
         // ---- CONSTRUCTORS & DESTRUCTOR ------------------------------------------------------------------------------
 
         /// <summary>
@@ -377,6 +379,18 @@ namespace Syroot.NintenTools.NSW.Bfres.Core
             }
         }
 
+        internal T Load<T>(uint offset)
+         where T : IResData, new()
+        {
+            if (offset == 0) return default(T);
+
+            // Seek to the instance data and load it.
+            using (TemporarySeek(offset, SeekOrigin.Begin))
+            {
+                return ReadResData<T>();
+            }
+        }
+
         /// <summary>
         /// Reads and returns an instance of arbitrary type <typeparamref name="T"/> from the following offset with the
         /// given <paramref name="callback"/> or returns <c>null</c> if the read offset is 0.
@@ -407,7 +421,7 @@ namespace Syroot.NintenTools.NSW.Bfres.Core
         [DebuggerStepThrough]
         internal ResDict LoadDict()
         {
-            long offset = ReadInt64();
+            long offset = ReadOffset();
             if (offset == 0) return new ResDict();
 
             using (TemporarySeek(offset, SeekOrigin.Begin))
@@ -529,17 +543,16 @@ namespace Syroot.NintenTools.NSW.Bfres.Core
         /// <returns>The absolute address of the offset.</returns>
         internal long ReadOffset(bool Relocated = false)
         {
+            long pos = this.Position;
             long offset = ReadInt64();
-
-            if (Relocated == true)
-            {
-            }
+            //if (offset != 0 && pos > 100 && !RelocatedPointers.Contains(pos))
+               // throw new Exception();
 
             return offset == 0 ? 0 : offset;
         }
 
         /// <summary>
-        /// Reads BFRES offsets which is the absolute addresses.
+        /// Reads BFRES offsets which is the absolute addresses.+
         /// </summary>
         /// <param name="count">The number of offsets to read.</param>
         /// <returns>The absolute addresses of the offsets.</returns>

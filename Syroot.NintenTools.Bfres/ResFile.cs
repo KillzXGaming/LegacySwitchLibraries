@@ -346,7 +346,11 @@ namespace Syroot.NintenTools.NSW.Bfres
             BlockOffset = loader.ReadUInt16();
             uint RelocationTableOffset = loader.ReadUInt32();
             uint sizFile = loader.ReadUInt32();
+
             Name = loader.LoadString();
+
+            // loader.Load<RelocationTableTest>(RelocationTableOffset);
+
             long ModelArrayOffset = loader.ReadOffset();
             ModelDict = loader.LoadDict();
 
@@ -432,8 +436,8 @@ namespace Syroot.NintenTools.NSW.Bfres
         
         void IResData.Save(ResFileSaver saver)
         {
-            if (saver.ResFile.VersionMajor2 > 9)
-                throw new System.Exception($"Version {saver.ResFile.VersionMajor2} does not support saving!");
+          //  if (saver.ResFile.VersionMajor2 > 9)
+              //  throw new System.Exception($"Version {saver.ResFile.VersionMajor2} does not support saving!");
 
             PreSave();
 

@@ -238,11 +238,11 @@ namespace Syroot.NintenTools.NSW.Bfres
             Name = loader.LoadString();
             Path = loader.LoadString();
             BindModel = loader.Load<Model>();
-            long BindIndicesOffset = loader.ReadInt64();
-            long CurveArrayOffset  = loader.ReadInt64();
-            long BaseDataArrayOffset = loader.ReadInt64();
-            long NameArrayOffset = loader.ReadInt64();
-            long UserDataOffset = loader.ReadInt64();
+            long BindIndicesOffset = loader.ReadOffset();
+            long CurveArrayOffset  = loader.ReadOffset();
+            long BaseDataArrayOffset = loader.ReadOffset();
+            long NameArrayOffset = loader.ReadOffset();
+            long UserDataOffset = loader.ReadOffset();
             UserDataDict = loader.LoadDict();
 
             if (loader.ResFile.VersionMajor2 < 9)

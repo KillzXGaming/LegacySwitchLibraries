@@ -144,44 +144,18 @@ namespace Syroot.NintenTools.NSW.Bfres
                     Console.Write(" pointer");
                     using (loader.TemporarySeek(entry.position, System.IO.SeekOrigin.Begin))
                     {
-                        for (int off = 0; off < entry.offsetCount; off++)
+                        for (int s = 0; s < entry.structCount; s++)
                         {
-                            long offset = loader.ReadInt64();
-                            Console.Write(" " + offset);
-
-                            try
+                            for (int off = 0; off < entry.offsetCount; off++)
                             {
-                                using (loader.TemporarySeek(offset, System.IO.SeekOrigin.Begin))
-                                {
-                                }
-                            }
-                            catch
-                            {
-                                throw new ResException($"Invalid relocation pointer section {i} entry {e} pointer {offset}");
-                            }
+                                long pos = loader.Position;
 
-                        }
-                    }
-                    //      Console.WriteLine("----------------------------------------------------------");
-                }
-            }
+                                if (!loader.RelocatedPointers.Contains(pos))
+                                    loader.RelocatedPointers.Add(pos);
 
-            /*        int e = 0;
-                    foreach (RelocationEntry entry in _savedSection1Entries)
-                    {
-                        Console.WriteLine("\n----------------------------------------------------------");
-                        Console.WriteLine("Entry " + e);
-                        Console.Write(" Position " + entry.Position);
-                        Console.Write(" Offset count " + entry.OffsetCount);
-                        Console.Write(" Struct count " + entry.StructCount);
-                        Console.WriteLine(" Padding count " + entry.PadingCount);
-
-                        Console.Write(" pointer");
-                        using (loader.TemporarySeek(entry.Position, System.IO.SeekOrigin.Begin))
-                        {
-                            for (int off = 0; off < entry.OffsetCount; off++)
-                            {
                                 long offset = loader.ReadInt64();
+
+                                Console.Write(" " + offset);
 
                                 try
                                 {
@@ -191,19 +165,23 @@ namespace Syroot.NintenTools.NSW.Bfres
                                 }
                                 catch
                                 {
-                                    throw new ResException($"Invalid relocation pointer section {1} entry {e} pointer {offset}");
+                                    throw new ResException($"Invalid relocation pointer section {i} entry {e} pointer {offset}");
                                 }
-
                             }
+                            //Paddings
+                            loader.ReadInt64s(entry.paddingCount);
                         }
-                        e++;
                     }
-
-
-                    Console.WriteLine("----------------------------------------------------------");*/
+                }
+            }
         }
 
         void IResData.Save(ResFileSaver saver)
+        {
+
+        }
+
+        private void CheckValidOffset()
         {
 
         }

@@ -161,6 +161,8 @@ namespace Syroot.NintenTools.NSW.Bfres
 
         public long SourceParamOffset;
 
+        public int RenderInfoSize;
+
         // TODO: Methods to access ShaderParam variable values.
 
         // ---- METHODS ------------------------------------------------------------------------------------------------
@@ -181,23 +183,23 @@ namespace Syroot.NintenTools.NSW.Bfres
                 return;
             }
 
-            long RenderInfoArrayOffset    = loader.ReadInt64();
+            long RenderInfoArrayOffset    = loader.ReadOffset();
             RenderInfoDict                = loader.LoadDict();
             ShaderAssign                  = loader.Load<ShaderAssign>();
-            long TextureArrayOffset       = loader.ReadInt64();
-            long TextureNameArray         = loader.ReadInt64();
-            long SamplerArrayOffset       = loader.ReadInt64();
-            long SamplerInfoArray         = loader.ReadInt64();
+            long TextureArrayOffset       = loader.ReadOffset();
+            long TextureNameArray         = loader.ReadOffset();
+            long SamplerArrayOffset       = loader.ReadOffset();
+            long SamplerInfoArray         = loader.ReadOffset();
             SamplerDict                   = loader.LoadDict();
-            long ShaderParamArrayOffset   = loader.ReadInt64();
+            long ShaderParamArrayOffset   = loader.ReadOffset();
             ShaderParamDict               = loader.LoadDict();
-            SourceParamOffset             = loader.ReadInt64(); 
-            long UserDataOffset           = loader.ReadInt64();
+            SourceParamOffset             = loader.ReadOffset(); 
+            long UserDataOffset           = loader.ReadOffset();
             UserDataDict                  = loader.LoadDict();
-            long VolatileFlagsOffset      = loader.ReadInt64();
-            long userPointer              = loader.ReadInt64();
-            long SamplerSlotArrayOffset   = loader.ReadInt64();
-            long TexSlotArrayOffset       = loader.ReadInt64();
+            long VolatileFlagsOffset      = loader.ReadOffset();
+            long userPointer              = loader.ReadOffset();
+            long SamplerSlotArrayOffset   = loader.ReadOffset();
+            long TexSlotArrayOffset       = loader.ReadOffset();
             if (loader.ResFile.VersionMajor2 != 9)
                 Flags = loader.ReadEnum<MaterialFlags>(true);
             ushort idx                    = loader.ReadUInt16();
