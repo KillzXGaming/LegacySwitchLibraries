@@ -112,6 +112,8 @@ namespace Syroot.NintenTools.NSW.Bfres
             }
         }
 
+        public uint DataAlignmentOverride = 0;
+
         /// <summary>
         /// Gets or sets the major revision of the BFRES structure formats.
         /// </summary>
@@ -330,6 +332,8 @@ namespace Syroot.NintenTools.NSW.Bfres
         [Browsable(false)]
         public StringTable StringTable { get; set; }
 
+        public static bool UseExternalGPU = false;
+
         // ---- METHODS ------------------------------------------------------------------------------------------------
 
         void IResData.Load(ResFileLoader loader)
@@ -346,7 +350,6 @@ namespace Syroot.NintenTools.NSW.Bfres
             BlockOffset = loader.ReadUInt16();
             uint RelocationTableOffset = loader.ReadUInt32();
             uint sizFile = loader.ReadUInt32();
-
             Name = loader.LoadString();
 
             // loader.Load<RelocationTableTest>(RelocationTableOffset);
@@ -354,7 +357,6 @@ namespace Syroot.NintenTools.NSW.Bfres
             long ModelArrayOffset = loader.ReadOffset();
             ModelDict = loader.LoadDict();
 
-            //2 New sections! Thanks Nintendo!
             if (loader.ResFile.VersionMajor2 >= 9)
             {
                 long unkOffset = loader.ReadOffset();
@@ -387,7 +389,7 @@ namespace Syroot.NintenTools.NSW.Bfres
 
             if (loader.ResFile.VersionMajor2 >= 9)
             {
-                //Count for 2 new sections
+                //Count for 2 reserved sections
                 ushort unkCount = loader.ReadUInt16();
                 ushort unk2Count = loader.ReadUInt16();
 
@@ -401,9 +403,37 @@ namespace Syroot.NintenTools.NSW.Bfres
             ushort numShapeAnim = loader.ReadUInt16();
             ushort numSceneAnim = loader.ReadUInt16();
             ushort numExternalFile = loader.ReadUInt16();
-            uint padding2 = loader.ReadUInt16();
-            uint padding3 = loader.ReadUInt32();
+            byte externalFlags = loader.ReadByte();
+            byte reserve10 = loader.ReadByte();
 
+            //If string cache for TOTK 
+            if (externalFlags == 4)
+            {
+                using (loader.TemporarySeek(ExternalFileOffset, SeekOrigin.Begin))
+                {
+                    StringCache.Strings.Clear();
+                    foreach (var str in StringTable.Strings)
+                    {
+                        long stringID = loader.ReadInt64();
+                        StringCache.Strings.Add(stringID, str);
+                    }
+                }
+                return;
+            }
+            //GPU section for TOTK
+            if (externalFlags == 11)
+            {
+                UseExternalGPU = true;
+                using (loader.TemporarySeek(sizFile, SeekOrigin.Begin))
+                {
+                    uint gpuDataOffset = loader.ReadUInt32();
+                    uint gpuBufferSize = loader.ReadUInt32();
+
+                //    loader.Seek(gpuDataOffset, SeekOrigin.Begin);
+                    BufferInfo = new BufferInfo();
+                    BufferInfo.BufferOffset = sizFile + 288;
+                }
+            }
 
             //Now load each subfile by list. 
             Models = loader.LoadList<Model>(numModel, ModelArrayOffset);
@@ -701,6 +731,17 @@ namespace Syroot.NintenTools.NSW.Bfres
                     infoIndex += subAnim.KeyShapeAnimInfos.Count;
                 }
             }
+        }
+
+        //Flags thanks to watertoon
+        public enum ExternalFlags : byte
+        {
+            IsExternalModelUninitalized = 1 << 0,
+            HasExternalString = 1 << 1,
+            HoldsExternalStrings = 1 << 2,
+            HasExternalGPU = 1 << 3,
+
+            MeshCodecResave = 1 << 7,
         }
     }
 }

@@ -4,6 +4,7 @@ using System.IO;
 using System.Collections.Generic;
 using System.Diagnostics;
 using Syroot.NintenTools.NSW.Bfres.Core;
+using System.Runtime.Remoting.Messaging;
 
 namespace Syroot.NintenTools.NSW.Bfres
 {
@@ -225,6 +226,8 @@ namespace Syroot.NintenTools.NSW.Bfres
 
         // ---- METHODS ------------------------------------------------------------------------------------------------
 
+        private ushort Unknown;
+
         void IResData.Load(ResFileLoader loader)
         {
             loader.CheckSignature(_signature);
@@ -245,54 +248,51 @@ namespace Syroot.NintenTools.NSW.Bfres
             long UserDataOffset = loader.ReadOffset();
             UserDataDict = loader.LoadDict();
 
-            if (loader.ResFile.VersionMajor2 < 9)
-                _flags = loader.ReadUInt16();
-            else
-                loader.ReadUInt16(); //Idk what this is
+            ushort numUserData = 0;
+            ushort numAnim = 0;
+            ushort numCurve = 0;
 
-            ushort numUserData = loader.ReadUInt16();
-            FrameCount = loader.ReadInt32();
-            ushort numAnim = loader.ReadUInt16();
-            ushort numCurve = loader.ReadUInt16();
-            BakedSize = loader.ReadUInt32();
+            if (loader.ResFile.VersionMajor2 >= 9)
+            {
+                FrameCount = loader.ReadInt32();
+                BakedSize = loader.ReadUInt32();
+                numAnim = loader.ReadUInt16();
+                numCurve = loader.ReadUInt16();
+                numUserData = loader.ReadUInt16();
+                loader.ReadUInt16(); //padding
+            }
+            else
+            {
+                _flags = loader.ReadUInt16();
+                numUserData = loader.ReadUInt16();
+                FrameCount = loader.ReadInt32();
+                numAnim = loader.ReadUInt16();
+                numCurve = loader.ReadUInt16();
+                BakedSize = loader.ReadUInt32();
+            }
       
             BindIndices = loader.LoadCustom(() => loader.ReadUInt16s(numAnim), BindIndicesOffset);
             Names = loader.LoadCustom(() => loader.LoadStrings(numAnim), NameArrayOffset); // Offset to name list.
             Curves = loader.LoadList<AnimCurve>(numCurve, CurveArrayOffset);
             UserData = loader.LoadList<UserData>(numUserData, UserDataOffset);
-            BaseSDataList = loader.LoadCustom(() => loader.ReadBytes(numAnim), BaseDataArrayOffset);
-            
-            BaseDataList = loader.LoadCustom(() =>
+
+            BaseDataList = new bool[numAnim];
+            BaseSDataList = loader.LoadCustom(() =>
             {
-                bool[] baseData = new bool[numAnim];
-
-                int num1 = (int)Math.Ceiling((double)numAnim / 32.0);
-                for (int index = 0; index < num1; ++index)
-                {
-                    int num2 = index >= num1 - 1 ? (int)numAnim % 32 : 32;
-                    int num3 = 0;
-                    uint num4 = loader.ReadUInt32();
-                    int num5 = 0;
-                    while (num5 < num2)
-                    {
-                        baseData[index * 32 + num5] = ((int)(num4 >> num3) & 1) == 1;
-                        ++num5;
-                        ++num3;
-                    }
-                }
-                return baseData;
-
-
+                List<byte> values = new List<byte>();
                 int i = 0;
                 while (i < numAnim)
                 {
                     byte b = loader.ReadByte();
+                    values.Add(b);
+
                     for (int j = 0; j < 8 && i < numAnim; j++)
                     {
-                        baseData[i++] = b.GetBit(j);
+                        BaseDataList[i] = b.GetBit(j);
+                        i++;
                     }
                 }
-                return baseData;
+                return values.ToArray();
             }, BaseDataArrayOffset);
         }
         
@@ -341,18 +341,31 @@ namespace Syroot.NintenTools.NSW.Bfres
             PosNamesOffset = saver.SaveOffset();
             PosUserDataOffset = saver.SaveOffset();
             PosUserDataDictOffset = saver.SaveOffset();
-            if (saver.ResFile.VersionMajor2 < 9)
+
+            if (saver.ResFile.VersionMajor2 >= 9)
+            {
+                saver.Write(FrameCount);
+                saver.Write(BakedSize);
+                if (Names != null)
+                    saver.Write((ushort)Names.Count);
+                else
+                    saver.Write((ushort)0);
+                saver.Write((ushort)Curves.Count);
+                saver.Write((ushort)UserDataDict.Count);
+                saver.Write((ushort)0);//padding
+            }
+            else
+            {
                 saver.Write(_flags);
-            else
-                saver.Write((ushort)0);
-            saver.Write((ushort)UserDataDict.Count);
-            saver.Write(FrameCount);
-            if (Names != null)
-                saver.Write((ushort)Names.Count);
-            else
-                saver.Write((ushort)0);
-            saver.Write((ushort)Curves.Count);
-            saver.Write(BakedSize);
+                saver.Write((ushort)UserDataDict.Count);
+                saver.Write(FrameCount);
+                if (Names != null)
+                    saver.Write((ushort)Names.Count);
+                else
+                    saver.Write((ushort)0);
+                saver.Write((ushort)Curves.Count);
+                saver.Write(BakedSize);
+            }
         }
     }
     

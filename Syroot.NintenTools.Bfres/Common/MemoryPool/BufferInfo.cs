@@ -178,6 +178,7 @@ namespace Syroot.NintenTools.NSW.Bfres
 
             if (BufferTotalSize % saver.ResFile.Alignment != 0) BufferTotalSize = BufferTotalSize + (saver.ResFile.Alignment - (BufferTotalSize % saver.ResFile.Alignment));
 
+            
             saver.SaveBufferTotalSize();
             saver.SaveRelocateEntryToSection(saver.Position, 1, 1, 0, ResFileSaver.Section2, "Buffer Data"); //      <------------ Entry Set
             saver.SaveIndexBufferPointer();

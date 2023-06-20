@@ -472,6 +472,9 @@ namespace Syroot.NintenTools.NSW.Bfres.Core
             long offset = ReadOffset();
             if (offset == 0) return null;
 
+            if (StringCache.Strings.ContainsKey(offset))
+                return StringCache.Strings[offset];
+
             encoding = encoding ?? Encoding;
             using (TemporarySeek(offset, SeekOrigin.Begin))
             {
@@ -514,9 +517,16 @@ namespace Syroot.NintenTools.NSW.Bfres.Core
                     long offset = offsets[i];
                     if (offset == 0) continue;
 
-                    Position = offset;
-                    short size = ReadInt16();
-                    names[i] = ReadString(BinaryStringFormat.ZeroTerminated, encoding);
+                    if (StringCache.Strings.ContainsKey(offset))
+                    {
+                        names[i] = StringCache.Strings[offset];
+                    }
+                    else
+                    {
+                        Position = offset;
+                        short size = ReadInt16();
+                        names[i] = ReadString(BinaryStringFormat.ZeroTerminated, encoding);
+                    }
                 }
                 return names;
             }

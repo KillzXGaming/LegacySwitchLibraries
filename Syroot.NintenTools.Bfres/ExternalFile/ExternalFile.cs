@@ -55,11 +55,19 @@ namespace Syroot.NintenTools.NSW.Bfres
         void IResData.Save(ResFileSaver saver)
         {
             saver.SaveRelocateEntryToSection(saver.Position, 1, 1, 0, ResFileSaver.Section5, "External files"); //      <------------ Entry Set
-            if (Data.Length <= 3)
-                saver.SaveBlock(Data, (int)512, () => saver.Write(Data));
+            if (Data != null)
+            {
+                if (Data.Length <= 3)
+                    saver.SaveBlock(Data, (int)512, () => saver.Write(Data));
+                else
+                    saver.SaveBlock(Data, (int)saver.ResFile.DataAlignment, () => saver.Write(Data));
+                saver.Write((long)Data?.Length);
+            }
             else
-                saver.SaveBlock(Data, (int)saver.ResFile.DataAlignment, () => saver.Write(Data));
-            saver.Write((long)Data.Length);
+            {
+                saver.Write(0UL);
+                saver.Write(0UL);
+            }
         }
     }
 }

@@ -120,6 +120,18 @@ namespace Syroot.NintenTools.NSW.Bfres
         public IList<AnimCurve> Curves { get; set; }
 
         /// <summary>
+        /// Gets or sets customly attached <see cref="UserData"/> names.
+        /// </summary>
+        [Browsable(false)]
+        public ResDict UserDataDict { get; set; }
+
+        /// <summary>
+        /// Gets or sets customly attached <see cref="UserData"/> instances.
+        /// </summary>
+        [Browsable(false)]
+        public IList<UserData> UserData { get; set; }
+
+        /// <summary>
         /// Gets or sets initial transformation values. Only stores specific transformations according to
         /// <see cref="FlagsBase"/>.
         /// </summary>
@@ -299,12 +311,11 @@ namespace Syroot.NintenTools.NSW.Bfres
             Name = loader.LoadString();
             long CurveOffset = loader.ReadOffset(true);
             long BaseDataOffset = loader.ReadOffset(true);
+            long userDataOffset = 0;
             if (loader.ResFile.VersionMajor2 >= 9)
             {
-                long unk1 = loader.ReadInt64();
-                long unk2 = loader.ReadInt64();
-                if (unk1 != 0 || unk2 != 0)
-                    throw new Exception();
+                userDataOffset = loader.ReadInt64();
+                UserDataDict = loader.LoadDict();
             }
             _flags = loader.ReadUInt32();
             BeginRotate = loader.ReadByte();
@@ -312,10 +323,12 @@ namespace Syroot.NintenTools.NSW.Bfres
             byte numCurve = loader.ReadByte();
             BeginBaseTranslate = loader.ReadByte();
             BeginCurve = loader.ReadInt32();
-            int padding = loader.ReadInt32();
+            ushort numUserData = loader.ReadUInt16();
+            loader.ReadInt16(); //padding
 
             BaseData = loader.LoadCustom(() => new BoneAnimData(loader, FlagsBase), BaseDataOffset);
             Curves = loader.LoadList<AnimCurve>(numCurve, CurveOffset);
+            UserData = loader.LoadList<UserData>(numUserData, userDataOffset);
         }
 
         internal long PosCurvesOffset;
@@ -326,7 +339,9 @@ namespace Syroot.NintenTools.NSW.Bfres
             PosCurvesOffset = saver.SaveOffset();
             PosBaseDataOffset = saver.SaveOffset();
             if (saver.ResFile.VersionMajor2 >= 9)
+            {
                 saver.Seek(16);
+            }
 
             saver.Write(_flags);
             saver.Write(BeginRotate);

@@ -56,6 +56,8 @@ namespace Syroot.NintenTools.NSW.Bfres
         {
             get
             {
+                if (Data == null) return 0;
+
                 // Sum indices in all bufferings together, even if only first is mostly used.
                 int elementCount = 0;
                 int formatSize = FormatSize;
@@ -238,8 +240,6 @@ namespace Syroot.NintenTools.NSW.Bfres
 
             //Load buffer data from mem block
             Data = loader.LoadCustom(() => loader.ReadBytes((int)bufferSize.Size), DataOffset);
-
-
         }
 
         internal long PosSubMeshesOffset;

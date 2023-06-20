@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Runtime.Remoting.Messaging;
 using System.Text;
 
 namespace Syroot.NintenTools.NSW.Bfres.Core
@@ -549,7 +550,7 @@ namespace Syroot.NintenTools.NSW.Bfres.Core
             }
             if (ResFile.SkeletalAnims.Count > 0)
             {
-                if (ResFile.VersionMajor2 == 9)
+                if (ResFile.VersionMajor2 >= 9)
                 {
                     SaveRelocateEntryToSection(Position + 8, 2, (uint)ResFile.SkeletalAnims.Count, 8, Section1, "Skeleton Animation"); //      <------------ Entry Set
                     SaveRelocateEntryToSection(Position + 32, 4, (uint)ResFile.SkeletalAnims.Count, 6, Section1, "Skeleton Animation"); //      <------------ Entry Set
@@ -574,7 +575,7 @@ namespace Syroot.NintenTools.NSW.Bfres.Core
             }
             if (ResFile.BoneVisibilityAnims.Count > 0)
             {
-                if (ResFile.VersionMajor2 == 9)
+                if (ResFile.VersionMajor2 >= 9)
                 {
                     SaveRelocateEntryToSection(Position + 8, 2, (uint)ResFile.BoneVisibilityAnims.Count, 10, Section1, "Bone Vis Animation"); //      <------------ Entry Set
                     SaveRelocateEntryToSection(Position + 32, 6, (uint)ResFile.BoneVisibilityAnims.Count, 6, Section1, "Bone Vis Animation"); //      <------------ Entry Set
@@ -591,7 +592,7 @@ namespace Syroot.NintenTools.NSW.Bfres.Core
             }
             if (ResFile.ShapeAnims.Count > 0)
             {
-                if (ResFile.VersionMajor2 == 9)
+                if (ResFile.VersionMajor2 >= 9)
                 {
                     SaveRelocateEntryToSection(Position + 8, 2, (uint)ResFile.ShapeAnims.Count, 10, Section1, "Shape Animation"); //      <------------ Entry Set
                     SaveRelocateEntryToSection(Position + 32, 6, (uint)ResFile.ShapeAnims.Count, 6, Section1, "Shape Animation"); //      <------------ Entry Set
@@ -608,7 +609,7 @@ namespace Syroot.NintenTools.NSW.Bfres.Core
             }
             if (ResFile.SceneAnims.Count > 0)
             {
-                if (ResFile.VersionMajor2 == 9)
+                if (ResFile.VersionMajor2 >= 9)
                 {
                     SaveRelocateEntryToSection(Position + 8, 2, (uint)ResFile.SceneAnims.Count, 10, Section1, "Scene Animation"); //      <------------ Entry Set
                     SaveRelocateEntryToSection(Position + 32, 6, (uint)ResFile.SceneAnims.Count, 6, Section1, "Scene Animation"); //      <------------ Entry Set
@@ -929,7 +930,18 @@ namespace Syroot.NintenTools.NSW.Bfres.Core
             if (shp.RadiusArray.Count > 0)
             {
                 WriteOffset(shp.PosRadiusArrayOffset);
-                Write(shp.RadiusArray);
+                if (ResFile.VersionMajor2 >= 10)
+                {
+                    foreach (var radius in shp.BoundingRadiusList)
+                    {
+                        Write(radius.X);
+                        Write(radius.Y);
+                        Write(radius.Z);
+                        Write(radius.W);
+                    }
+                }
+                else
+                    Write(shp.RadiusArray);
             }
             foreach (Mesh msh in shp.Meshes)
             {
@@ -993,7 +1005,7 @@ namespace Syroot.NintenTools.NSW.Bfres.Core
             if (ska.BoneAnims.Count > 0)
             {
                 Align(8);
-                if (ResFile.VersionMajor2 == 9)
+                if (ResFile.VersionMajor2 >= 9)
                     SaveRelocateEntryToSection(Position, 3, (uint)ska.BoneAnims.Count, 4, Section1, "Bone Animation"); //      <------------ Entry Set
                 else
                     SaveRelocateEntryToSection(Position, 3, (uint)ska.BoneAnims.Count, 2, Section1, "Bone Animation"); //      <------------ Entry Set
@@ -1678,7 +1690,7 @@ namespace Syroot.NintenTools.NSW.Bfres.Core
             //Setup alignment
             if (ResFile.ExternalFiles.Count > 0)
             {
-                if (ResFile.ExternalFiles[0].Data.Length <= 3)
+                if (ResFile.ExternalFiles[0].Data?.Length <= 3)
                     Align((int)256);
                 else
                     Align((int)ResFile.DataAlignment);
@@ -2075,7 +2087,15 @@ namespace Syroot.NintenTools.NSW.Bfres.Core
         [DebuggerStepThrough]
         internal void SaveString(string str, Encoding encoding = null, bool Relocate = false)
         {
-            if(str == null)
+            //TOTK string cache
+           /* if (StringCache.Strings.Any(x => x.Value == str))
+            {
+                var offset = StringCache.Strings.FirstOrDefault(x => x.Value == str).Key;
+                Write(offset);
+                return;
+            }*/
+
+            if (str == null)
             {
                 Write(0L);
                 return;
@@ -2296,7 +2316,9 @@ namespace Syroot.NintenTools.NSW.Bfres.Core
 
         private void WriteIndexBuffer()
         {
-            Align(ResFile.DataAlignment);
+            // Align(ResFile.DataAlignment);
+            Align((int)ResFile.DataAlignmentOverride != 0 ? (int)ResFile.DataAlignmentOverride : ResFile.DataAlignment);
+
             bufferInfoOffset = Position;
             for (int i = 0; i < ResFile.BufferInfo.IndexBufferData.Length; i++)
             {

@@ -136,6 +136,7 @@ namespace Syroot.NintenTools.NSW.Bfres.Helpers
             vertexBuffer.Buffers = new List<VertexBuffer.buffData>(Attributes.Count);
             vertexBuffer.StrideArray = new List<VertexBufferStride>();
             vertexBuffer.VertexBufferSizeArray = new List<VertexBufferSize>();
+            vertexBuffer.VertexCount = (uint)lastElementCount;
 
             foreach (VertexBufferHelperAttrib helperAttrib in Attributes)
             {
@@ -189,7 +190,7 @@ namespace Syroot.NintenTools.NSW.Bfres.Helpers
                 reader.ByteOrder = ByteOrder.LittleEndian;
 
                 // Get a conversion callback transforming the raw data into a Vector4F instance.
-                Func<BinaryDataReader, Vector4F> callback = reader.GetAttribCallback(attrib.Format);
+                Func<BinaryDataReader, Vector4F> callback =  reader.GetAttribCallback(attrib.Format);
 
                 // Read the elements.
                 Vector4F[] elements = new Vector4F[vertexBuffer.VertexCount];
@@ -197,6 +198,14 @@ namespace Syroot.NintenTools.NSW.Bfres.Helpers
                 {
                     reader.Position = attrib.Offset + (i * vertexBuffer.StrideArray[attrib.BufferIndex].Stride);
                     elements[i] = callback.Invoke(reader);
+                    //Dumb hack for now. Parse Snorm16 types back to a short
+                    if (attrib.Name.Contains("_i"))
+                    {
+                        switch (attrib.Format)
+                        {
+                            case GFX.AttribFormat.Format_16_SNorm: elements[i].X = elements[i].X * 32767f; break;
+                        }
+                    }
                 }
                 return elements;
             }

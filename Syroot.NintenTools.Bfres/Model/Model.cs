@@ -144,6 +144,11 @@ namespace Syroot.NintenTools.NSW.Bfres
         public IList<Material> Materials { get; set; }
 
         /// <summary>
+        /// 
+        /// </summary>
+        public List<ShaderAssign> ShaderAssigns = new List<ShaderAssign>();
+
+        /// <summary>
         /// Gets or sets customly attached <see cref="UserData"/> names.
         /// </summary>
         [Browsable(false)]
@@ -247,6 +252,8 @@ namespace Syroot.NintenTools.NSW.Bfres
 
         private uint UnknownFlag;
 
+        private ushort ShaderAssignCount = 1;
+
         void IResData.Load(ResFileLoader loader)
         {
             loader.CheckSignature(_signature);
@@ -267,11 +274,13 @@ namespace Syroot.NintenTools.NSW.Bfres
                 loader.ReadOffset(); //padding?
 
             MaterialDict = loader.LoadDict();
+
+            if (loader.ResFile.VersionMajor2 >= 10)
+                ShaderAssignOffset = loader.ReadOffset();
+
             long UserDataOffset       = loader.ReadOffset();
             UserDataDict              = loader.LoadDict();
 
-            if (loader.ResFile.VersionMajor2 >= 10)
-                loader.ReadOffset(); //padding?
 
             long UserPointer          = loader.ReadInt64();
 
@@ -282,7 +291,7 @@ namespace Syroot.NintenTools.NSW.Bfres
             ushort numUserData = 0;
             if (loader.ResFile.VersionMajor2 >= 9)
             {
-                loader.ReadUInt16(); //padding?
+                ShaderAssignCount = loader.ReadUInt16(); //padding?
                 numUserData = loader.ReadUInt16();
                 loader.ReadUInt16(); //padding?
                 uint padding = loader.ReadUInt32();
@@ -293,6 +302,9 @@ namespace Syroot.NintenTools.NSW.Bfres
                 uint totalVertexCount = loader.ReadUInt32();
                 uint padding = loader.ReadUInt32();
             }
+
+            if (ShaderAssignCount > 1)
+                throw new System.Exception();
 
             Shapes = loader.LoadList<Shape>(numShape, ShapeArrayOffset);
             Materials = loader.LoadList<Material>(numMaterial, MaterialArrayOffset);
@@ -308,6 +320,7 @@ namespace Syroot.NintenTools.NSW.Bfres
         internal long MaterialsDictOffset;
         internal long PosUserDataOffset;
         internal long PosUserDataDictOffset;
+        internal static long ShaderAssignOffset;
 
         void IResData.Save(ResFileSaver saver)
         {
@@ -320,7 +333,7 @@ namespace Syroot.NintenTools.NSW.Bfres
             if (saver.ResFile.VersionMajor2 == 9)
                 saver.SaveRelocateEntryToSection(saver.Position, 10, 1, 0, ResFileSaver.Section1, "Model");
             else if (saver.ResFile.VersionMajor2 >= 10)
-                saver.SaveRelocateEntryToSection(saver.Position, 12, 1, 0, ResFileSaver.Section1, "Model"); 
+                saver.SaveRelocateEntryToSection(saver.Position, 11, 1, 0, ResFileSaver.Section1, "Model"); 
             else
                 saver.SaveRelocateEntryToSection(saver.Position, 10, 1, 0, ResFileSaver.Section1, "Model"); 
 
@@ -331,14 +344,18 @@ namespace Syroot.NintenTools.NSW.Bfres
             ShapeOffset = saver.SaveOffset();
             ShapeDictOffset = saver.SaveOffset();
             MaterialsOffset = saver.SaveOffset();
-            if (saver.ResFile.VersionMajor2 == 9)
-                saver.Write(0L);
             MaterialsDictOffset = saver.SaveOffset();
-            PosUserDataOffset = saver.SaveOffset();
-            PosUserDataDictOffset = saver.SaveOffset();
 
             if (saver.ResFile.VersionMajor2 >= 10)
-                saver.Write(0L); //padding?
+            {
+                ShaderAssignOffset = saver.SaveOffset(); //shader assign for animation binding?
+            }
+
+            if (saver.ResFile.VersionMajor2 == 9)
+                saver.Write(0L);
+
+            PosUserDataOffset = saver.SaveOffset();
+            PosUserDataDictOffset = saver.SaveOffset();
 
             saver.Write(0L);
             saver.Write((ushort)VertexBuffers.Count);

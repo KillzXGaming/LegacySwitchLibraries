@@ -25,7 +25,7 @@ namespace Syroot.NintenTools.NSW.Bfres
             long renderInfoDataOffsets = loader.ReadOffset(); //offsets as shorts
             long SourceParamOffset = loader.ReadOffset(); //raw param data
             long SourceParamIndices = loader.ReadOffset(); //0xFFFF per param.
-            loader.ReadUInt64(); //0
+            loader.ReadUInt64(); //reserved
             long UserDataOffset = loader.ReadOffset();
             mat.UserDataDict = loader.LoadDict();
             long VolatileFlagsOffset = loader.ReadOffset();
@@ -33,14 +33,13 @@ namespace Syroot.NintenTools.NSW.Bfres
             long SamplerSlotArrayOffset = loader.ReadOffset();
             long TexSlotArrayOffset = loader.ReadOffset();
             ushort idx = loader.ReadUInt16();
-            byte numTextureRef = loader.ReadByte();
             byte numSampler = loader.ReadByte();
-            ushort numShaderParamVolatile = loader.ReadUInt16(); //idk
+            byte numTextureRef = loader.ReadByte();
+            loader.ReadUInt16(); //reserved
             ushort numUserData = loader.ReadUInt16();
             ushort renderInfoDataSize = loader.ReadUInt16();
-            loader.ReadUInt16(); //0
-            loader.ReadUInt16(); //0
-            loader.ReadUInt16(); //0
+            ushort user_shading_model_option_ubo_size = loader.ReadUInt16(); //Set at runtime?
+            loader.ReadUInt32(); //padding
 
             mat.RenderInfoSize = renderInfoDataSize;
 
@@ -68,12 +67,21 @@ namespace Syroot.NintenTools.NSW.Bfres
             LoadSamplerAssign(info, mat);
             LoadShaderOptions(info, mat);
 
+            //Model pointed to shader assign section
+            if (info.ShaderAssign.IsAnimationBinded)
+            {
+                //Point this material to the model section
+            }
+
             loader.Seek(pos, SeekOrigin.Begin);
         }
 
         static void ReadRenderInfo(ResFileLoader loader, ShaderInfo info, Material mat,
     long renderInfoCounterTable, long renderInfoDataOffsets, long renderInfoDataTable)
         {
+            mat.RenderInfoDict = new ResDict();
+            mat.RenderInfos = new List<RenderInfo>();
+
             for (int i = 0; i < info.ShaderAssign.RenderInfos.Count; i++)
             {
                 RenderInfo renderInfo = new RenderInfo();
@@ -102,6 +110,9 @@ namespace Syroot.NintenTools.NSW.Bfres
 
         static void ReadShaderParams(ResFileLoader loader, ShaderInfo info, Material mat)
         {
+            mat.ShaderParamDict = new ResDict();
+            mat.ShaderParams = new List<ShaderParam>();
+
             for (int i = 0; i < info.ShaderAssign.ShaderParameters.Count; i++)
             {
                 ShaderParam param = new ShaderParam();
@@ -113,6 +124,9 @@ namespace Syroot.NintenTools.NSW.Bfres
                 param.Type = (ShaderParamType)loader.ReadUInt16(); //type
                 var pad2 = loader.ReadUInt32(); //padding
 
+                if (pad0 != 0 || pad2 != 0)
+                    throw new Exception();
+
                 mat.ShaderParams.Add(param);
                 mat.ShaderParamDict.Add(param.Name);
             }
@@ -123,7 +137,7 @@ namespace Syroot.NintenTools.NSW.Bfres
             for (int i = 0; i < info.ShaderAssign.AttributeAssign.Count; i++)
             {
                 int idx = info.AttributeAssignIndices?.Length > 0 ? info.AttributeAssignIndices[i] : i;
-                var value = idx == -1 ? "<Unused Attribute>" : info.AttribAssigns[idx];
+                var value = idx == -1 ? "<Default Value>" : info.AttribAssigns[idx];
                 var key = info.ShaderAssign.AttributeAssign.GetKey(i);
 
                 mat.ShaderAssign.AttribAssigns.Add(value);
@@ -136,7 +150,7 @@ namespace Syroot.NintenTools.NSW.Bfres
             for (int i = 0; i < info.ShaderAssign.SamplerAssign.Count; i++)
             {
                 int idx = info.SamplerAssignIndices?.Length > 0 ? info.SamplerAssignIndices[i] : i;
-                var value = idx == -1 ? "<Unused Sampler>" : info.SamplerAssigns[idx];
+                var value = idx == -1 ? "Default Value>" : info.SamplerAssigns[idx];
                 var key = info.ShaderAssign.SamplerAssign.GetKey(i);
 
                 mat.ShaderAssign.SamplerAssigns.Add(value);
@@ -148,15 +162,19 @@ namespace Syroot.NintenTools.NSW.Bfres
         {
             //Find target option
             List<string> choices = new List<string>();
+            //Boolean types
             for (int i = 0; i < info.OptionToggles.Length; i++)
                 choices.Add(info.OptionToggles[i] ? "True" : "False");
+            //Value types
             if (info.OptionValues != null)
                 choices.AddRange(info.OptionValues);
 
             for (int i = 0; i < info.ShaderAssign.Options.Count; i++)
             {
+                //Get the choice value index
                 int idx = info.OptionIndices?.Length > 0 ? info.OptionIndices[i] : i;
-                var value = idx == -1 ? "<Unused Variation>" : choices[idx];
+                //If choice is -1, it is not used, else get the choice value
+                var value = idx == -1 ? "<Default Value>" : choices[idx];
                 var key = info.ShaderAssign.Options.GetKey(i);
 
                 mat.ShaderAssign.ShaderOptions.Add(value);
@@ -187,7 +205,7 @@ namespace Syroot.NintenTools.NSW.Bfres
                 //Values
                 foreach (var sampler in mat.ShaderAssign.SamplerAssigns)
                 {
-                    if (sampler == "<Unused Sampler>")
+                    if (sampler == "Default Value>")
                     {
                         samplerIndices.Add(-1);
                         continue;
@@ -200,9 +218,11 @@ namespace Syroot.NintenTools.NSW.Bfres
 
                 foreach (var sampler in mat.ShaderAssign.AttribAssigns)
                 {
-                    if (sampler == "<Unused Attribute>")
+                    if (sampler == "<Default Value>")
+                    {
+                        attributeIndices.Add(-1);
                         continue;
-
+                    }
                     info.AttribAssigns.Add(sampler);
                     attributeIndices.Add((sbyte)info.AttribAssigns.IndexOf(sampler));
                 }
@@ -212,7 +232,7 @@ namespace Syroot.NintenTools.NSW.Bfres
                 List<bool> toggles = new List<bool>();
                 foreach (var op in mat.ShaderAssign.ShaderOptions)
                 {
-                    if (op == "<Unused Variation>")
+                    if (op == "<Default Value>")
                     {
                         optionChoiceIndices.Add(-1);
                         continue;
@@ -248,7 +268,7 @@ namespace Syroot.NintenTools.NSW.Bfres
             renderInfoOrdered.AddRange(mat.RenderInfos.Where(x => x.Type == RenderInfoType.String));
             renderInfoOrdered.AddRange(mat.RenderInfos.Where(x => x.Type == RenderInfoType.Single));
             renderInfoOrdered.AddRange(mat.RenderInfos.Where(x => x.Type == RenderInfoType.Int32));
-            mat.RenderInfos = renderInfoOrdered.ToArray();
+            mat.RenderInfos = renderInfoOrdered.ToList();
 
             //Calculate total buffer sizes and offsets
             int renderInfoDataSize = 0;
@@ -395,10 +415,10 @@ namespace Syroot.NintenTools.NSW.Bfres
                 loader.ReadUInt32(); //padding
                 byte numAttributeAssign = loader.ReadByte();
                 byte numSamplerAssign = loader.ReadByte();
-                byte shaderOptionBooleanCount = loader.ReadByte();
-                byte unk2 = loader.ReadByte(); //0
-                byte shaderOptionChoiceCount = loader.ReadByte();
-                loader.ReadBytes(7); //padding
+                ushort shaderOptionBooleanCount = loader.ReadUInt16();
+                ushort shaderOptionChoiceCount = loader.ReadUInt16();
+                loader.ReadUInt16(); //padding
+                loader.ReadUInt32(); //padding
 
                 AttribAssigns = loader.LoadCustom(() => loader.LoadStrings(numAttributeAssign), (uint)attribAssignOffset);
                 SamplerAssigns = loader.LoadCustom(() => loader.LoadStrings(numSamplerAssign), (uint)samplerAssignOffset);
@@ -431,10 +451,9 @@ namespace Syroot.NintenTools.NSW.Bfres
                 saver.Write(0); //padding
                 saver.Write((byte)AttribAssigns?.Count);
                 saver.Write((byte)SamplerAssigns?.Count);
-                saver.Write((byte)OptionToggles?.Length);
-                saver.Write((byte)0); //0
-                saver.Write((byte)(OptionToggles?.Length + OptionValues?.Count));
-                saver.Write(new byte[7]); //padding
+                saver.Write((ushort)OptionToggles?.Length);
+                saver.Write((ushort)(OptionToggles?.Length + OptionValues?.Count));
+                saver.Write(new byte[6]); //padding
             }
 
             private sbyte[] ReadByteIndices(ResFileLoader loader, long offset, int usedCount, int totalCount)
@@ -528,8 +547,13 @@ namespace Syroot.NintenTools.NSW.Bfres
 
             public Material ParentMaterial;
 
+            internal bool IsAnimationBinded = false;
+
             void IResData.Load(ResFileLoader loader)
             {
+                if (Model.ShaderAssignOffset == loader.Position)
+                    IsAnimationBinded = true;
+
                 ShaderArchiveName = loader.LoadString();
                 ShadingModelName = loader.LoadString();
 
@@ -551,6 +575,16 @@ namespace Syroot.NintenTools.NSW.Bfres
 
             void IResData.Save(ResFileSaver saver)
             {
+                //Save model shader assign ref and only for first material being saved
+                if (Model.ShaderAssignOffset != 0)
+                {
+                    var pos = saver.Position;
+                    using (saver.TemporarySeek(Model.ShaderAssignOffset, SeekOrigin.Begin)) {
+                        saver.Write(pos);
+                    }
+                    Model.ShaderAssignOffset = 0;
+                }
+
                 RenderInfos = ParentMaterial.RenderInfoDict;
                 ShaderParameters = ParentMaterial.ShaderParamDict;
 

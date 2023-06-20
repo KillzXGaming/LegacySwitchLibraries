@@ -5,6 +5,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using Syroot.NintenTools.NSW.Bfres.Core;
 using System.ComponentModel;
+using Syroot.Maths;
 
 namespace Syroot.NintenTools.NSW.Bfres
 {
@@ -270,6 +271,8 @@ namespace Syroot.NintenTools.NSW.Bfres
         [Browsable(false)]
         public long BoundingBoxArrayOffset;
 
+        public List<Vector4F> BoundingRadiusList = new List<Vector4F>();
+
         // ---- METHODS ------------------------------------------------------------------------------------------------
 
         void IResData.Load(ResFileLoader loader)
@@ -296,9 +299,6 @@ namespace Syroot.NintenTools.NSW.Bfres
             {
                 RadiusOffset = 0;
                 long UserPointer = loader.ReadInt64();
-
-                RadiusArray = new List<float>();
-                RadiusArray.Add(loader.ReadSingle());
             }
             if (loader.ResFile.VersionMajor2 < 9)
                 Flags = loader.ReadEnum<ShapeFlags>(true);
@@ -318,10 +318,27 @@ namespace Syroot.NintenTools.NSW.Bfres
 
             Meshes = numMesh == 0 ? new List<Mesh>() : loader.LoadList<Mesh>(numMesh, MeshArrayOffset).ToList(); 
             SkinBoneIndices = numSkinBoneIndex == 0 ? new List<ushort>() : loader.LoadCustom(() => loader.ReadUInt16s(numSkinBoneIndex), SkinBoneIndexListOffset)?.ToList();
-            KeyShapes = numKeys == 0 ? new List<KeyShape>() : loader.LoadList<KeyShape>(numKeys, KeyShapesArrayOffset).ToList(); 
+            KeyShapes = numKeys == 0 ? new List<KeyShape>() : loader.LoadList<KeyShape>(numKeys, KeyShapesArrayOffset).ToList();
 
-            if (RadiusOffset != 0)
-                RadiusArray = numMesh == 0 ? new List<float>() : loader.LoadCustom(() => loader.ReadSingles(numMesh), RadiusOffset).ToList();
+            RadiusArray = new List<float>();
+            if (RadiusOffset != 0 && numMesh > 0)
+            {
+                using (loader.TemporarySeek(RadiusOffset, SeekOrigin.Begin))
+                {
+                    if (loader.ResFile.VersionMajor2 >= 10)
+                    {
+                        //A offset + radius size. Can be per mesh or per bone if there is skinning used.
+                        int numBoundings = numSkinBoneIndex == 0 ? numMesh : numSkinBoneIndex;
+                        for (int i = 0; i < numBoundings; i++)
+                            BoundingRadiusList.Add(loader.ReadVector4F());
+                        //Get largest radius for bounding radius list
+                        var max = BoundingRadiusList.Max(x => x.W);
+                        RadiusArray.Add(max);
+                    }
+                    else
+                        RadiusArray = loader.ReadSingles(numMesh).ToList();
+                }
+            }
 
             int boundingboxCount = 0;
             for (int msh = 0; msh < numMesh; msh++)
@@ -350,6 +367,18 @@ namespace Syroot.NintenTools.NSW.Bfres
 
         void IResData.Save(ResFileSaver saver)
         {
+            if (saver.ResFile.VersionMajor2 >= 10)
+            {
+                int numBoundings = SkinBoneIndices.Count == 0 ? Meshes.Count : SkinBoneIndices.Count;
+                //Regenerate if list is off
+                if (numBoundings != this.BoundingRadiusList.Count)
+                {
+                    BoundingRadiusList.Clear();
+                    for (int i = 0; i < numBoundings; i++)
+                        BoundingRadiusList.Add(new Vector4F(0, 0, 0, this.RadiusArray.Max(x => x)));
+                }
+            }
+
             saver.WriteSignature(_signature);
             if (saver.ResFile.VersionMajor2 >= 9)
                  saver.Write(Flags, false);

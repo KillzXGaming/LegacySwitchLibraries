@@ -78,21 +78,8 @@ namespace Syroot.NintenTools.NSW.Bfres
         /// Gets the number of vertices stored by the <see cref="Buffers"/>. It is calculated from the size of the first
         /// <see cref="Buffer"/> in bytes divided by the <see cref="StrideArray"/>.
         /// </summary>
-        public uint VertexCount
-        {
-            get
-            {
-                int dataSize = Buffers[0].Data.Length;
-                
-                // Throw an exception if the stride does not yield complete elements.
-                if (dataSize % Buffers[0].Stride != 0)
-                {
-                    throw new InvalidDataException($"Stride of {Buffers[0]} does not yield complete elements."); 
-                }
+        public uint VertexCount;
 
-                return (uint)(dataSize / StrideArray[0].Stride);
-            }
-        }
         public uint GetTotalBufferSize()
         {
             uint TotalSize = 0;
@@ -204,6 +191,8 @@ namespace Syroot.NintenTools.NSW.Bfres
 
         }
 
+        private uint GPUBufferAlignent = 8;
+
         // ---- METHODS ------------------------------------------------------------------------------------------------
 
         private uint UnknownFlag;
@@ -229,8 +218,9 @@ namespace Syroot.NintenTools.NSW.Bfres
             byte numVertexAttrib        = loader.ReadByte();
             byte numBuffer              = loader.ReadByte();
             ushort Idx                  = loader.ReadUInt16();
-            uint vertexCount            = loader.ReadUInt32();
-            VertexSkinCount             = loader.ReadUInt32();
+            VertexCount                 = loader.ReadUInt32();
+            VertexSkinCount = loader.ReadUInt16();
+            GPUBufferAlignent = loader.ReadUInt16();
 
             //So buffers work like this
             //They grab the index buffer offset from memory info section
@@ -243,23 +233,18 @@ namespace Syroot.NintenTools.NSW.Bfres
 
             //Extreemly hacky atm. Wil redo
             Buffers = new List<buffData>();
-            for (int buff = 0; buff < numBuffer; buff++)
+            using (loader.TemporarySeek(BufferInfo.BufferOffset + BufferOffset, SeekOrigin.Begin))
             {
-                buffData data = new buffData();
-
-                data.buffSize = (int)VertexBufferSizeArray[buff].Size;
-                data.Stride = (int)StrideArray[buff].Stride;
-
-                if (buff == 0) data.DataOffset = ((int)BufferInfo.BufferOffset + BufferOffset);
-                if (buff > 0) data.DataOffset = Buffers[buff - 1].DataOffset + Buffers[buff - 1].buffSize;
-                if (data.DataOffset % 8 != 0) data.DataOffset = data.DataOffset + (8 - (data.DataOffset % 8));
-
-                data.Data = loader.LoadCustom(() =>  //Load buffer data from mem block
+                for (int buff = 0; buff < numBuffer; buff++)
                 {
-                    return loader.ReadBytes(data.buffSize);
-                }, data.DataOffset);
+                    buffData buffer = new buffData();
+                    buffer.buffSize = (int)VertexBufferSizeArray[buff].Size;
+                    buffer.Stride = (int)StrideArray[buff].Stride;
 
-                Buffers.Add(data);
+                    loader.Align(8);
+                    buffer.Data = loader.ReadBytes(buffer.buffSize);
+                    Buffers.Add(buffer);
+                }
             }
         }
         internal long AttributeOffset;
@@ -297,7 +282,8 @@ namespace Syroot.NintenTools.NSW.Bfres
             saver.Write((byte)Buffers.Count);
             saver.Write((ushort)saver.CurrentIndex);
             saver.Write(VertexCount);
-            saver.Write(VertexSkinCount);
+            saver.Write((ushort)VertexSkinCount);
+            saver.Write((ushort)GPUBufferAlignent);
         }
     }
 }

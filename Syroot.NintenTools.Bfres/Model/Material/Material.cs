@@ -3,6 +3,7 @@ using System.IO;
 using System.Collections.Generic;
 using System.Diagnostics;
 using Syroot.NintenTools.NSW.Bfres.Core;
+using System.Linq;
 
 namespace Syroot.NintenTools.NSW.Bfres
 {
@@ -114,7 +115,7 @@ namespace Syroot.NintenTools.NSW.Bfres
 
         public ResDict RenderInfoDict { get; set; }
 
-        public IList<RenderInfo> RenderInfos { get; set; }
+        public List<RenderInfo> RenderInfos { get; set; }
 
         public ShaderAssign ShaderAssign { get; set; }
 
@@ -215,7 +216,7 @@ namespace Syroot.NintenTools.NSW.Bfres
             if (loader.ResFile.VersionMajor2 != 9)
                  loader.ReadUInt32(); //Padding
 
-            RenderInfos      = loader.LoadList<RenderInfo>(numRenderInfo, RenderInfoArrayOffset);
+            RenderInfos      = loader.LoadList<RenderInfo>(numRenderInfo, RenderInfoArrayOffset).ToList();
             TextureRefs      = loader.LoadCustom(() => loader.LoadStrings(numTextureRef), TextureNameArray);
             Samplers         = loader.LoadList<Sampler>(numSampler, SamplerInfoArray);
             UserDatas        = loader.LoadList<UserData>(numUserData, UserDataOffset);
