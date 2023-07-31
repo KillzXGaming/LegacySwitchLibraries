@@ -42,7 +42,8 @@ namespace Syroot.NintenTools.NSW.Bfres
 
         public IList<string> ShaderOptions { get; set; }
 
-
+        //v10 flag
+        public bool IsAnimationBinded = false;
 
         // ---- METHODS ------------------------------------------------------------------------------------------------
 

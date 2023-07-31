@@ -771,6 +771,19 @@ namespace Syroot.NintenTools.NSW.Bfres.Core
                     ((IResData)vtx).Save(this);
                 }
             }
+         /*   if (mdl.ShaderAssign.Count > 0)
+            {
+                int ShIndex = 0;
+
+                WriteOffset(mdl.ShaderAssignOffset);
+                foreach (var assign in mdl.ShaderAssign)
+                {
+                    _savedItems.Add(new ItemEntry(assign, ItemEntryType.ResData, (uint)this.Position));
+
+                    CurrentIndex = ShIndex++;
+                    ((IResData)assign).Save(this);
+                }
+            }*/
             if (mdl.Materials.Count > 0)
             {
                 int MatIndex = 0;

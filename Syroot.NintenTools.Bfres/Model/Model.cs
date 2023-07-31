@@ -3,6 +3,7 @@ using System.ComponentModel;
 using System.Collections.Generic;
 using System.Diagnostics;
 using Syroot.NintenTools.NSW.Bfres.Core;
+using System.Linq;
 
 namespace Syroot.NintenTools.NSW.Bfres
 {
@@ -242,6 +243,8 @@ namespace Syroot.NintenTools.NSW.Bfres
             }
         }
 
+        public IList<MaterialParserV10.ShaderAssignV10> ShaderAssign = new List<MaterialParserV10.ShaderAssignV10>();
+
         internal class Ofs
         {
             internal long FMDLOffset = 0;
@@ -291,7 +294,7 @@ namespace Syroot.NintenTools.NSW.Bfres
             ushort numUserData = 0;
             if (loader.ResFile.VersionMajor2 >= 9)
             {
-                ShaderAssignCount = loader.ReadUInt16(); //padding?
+                ShaderAssignCount = loader.ReadUInt16(); 
                 numUserData = loader.ReadUInt16();
                 loader.ReadUInt16(); //padding?
                 uint padding = loader.ReadUInt32();
@@ -303,13 +306,14 @@ namespace Syroot.NintenTools.NSW.Bfres
                 uint padding = loader.ReadUInt32();
             }
 
-            if (ShaderAssignCount > 1)
-                throw new System.Exception();
-
             Shapes = loader.LoadList<Shape>(numShape, ShapeArrayOffset);
+            ShaderAssign = loader.LoadList<MaterialParserV10.ShaderAssignV10>(ShaderAssignCount, ShaderAssignOffset);
             Materials = loader.LoadList<Material>(numMaterial, MaterialArrayOffset);
             UserData = loader.LoadList<UserData>(numUserData, UserDataOffset);
             VertexBuffers = loader.LoadList<VertexBuffer>(numVertexBuffer, VertexArrayOffset);
+
+            foreach (var assign in ShaderAssign)
+                assign.IsAnimationBinded = true;
         }
 
         internal long SkeletonOffset;
@@ -320,10 +324,17 @@ namespace Syroot.NintenTools.NSW.Bfres
         internal long MaterialsDictOffset;
         internal long PosUserDataOffset;
         internal long PosUserDataDictOffset;
-        internal static long ShaderAssignOffset;
+        internal long ShaderAssignOffset;
 
         void IResData.Save(ResFileSaver saver)
         {
+            //Add all shader assign that is bindable
+            if (saver.ResFile.VersionMajor2 >= 10)
+            {
+                var shaderAssignList = this.Materials.Where(x => x.ShaderAssign.IsAnimationBinded).Select(x => (MaterialParserV10.ShaderAssignV10)x.ShaderAssign);
+                this.ShaderAssign = shaderAssignList.ToList();
+            }
+
             saver.WriteSignature(_signature);
             if (saver.ResFile.VersionMajor2 >= 9)
                 saver.Write(UnknownFlag);
@@ -347,9 +358,7 @@ namespace Syroot.NintenTools.NSW.Bfres
             MaterialsDictOffset = saver.SaveOffset();
 
             if (saver.ResFile.VersionMajor2 >= 10)
-            {
-                ShaderAssignOffset = saver.SaveOffset(); //shader assign for animation binding?
-            }
+                saver.SaveList(ShaderAssign);
 
             if (saver.ResFile.VersionMajor2 == 9)
                 saver.Write(0L);
@@ -363,7 +372,7 @@ namespace Syroot.NintenTools.NSW.Bfres
             saver.Write((ushort)Materials.Count);
             if (saver.ResFile.VersionMajor2 >= 9)
             {
-                saver.Write((ushort)0);
+                saver.Write((ushort)ShaderAssign.Count);
                 saver.Write((ushort)UserData.Count);
                 saver.Write((ushort)0);
                 saver.Write(0);
