@@ -377,6 +377,49 @@ namespace Syroot.NintenTools.NSW.Bfres
             SceneAnimDict = loader.LoadDict();
             MemoryPool = loader.Load<MemoryPool>(true);
             BufferInfo = loader.Load<BufferInfo>(true);
+
+            if (loader.ResFile.VersionMajor2 >= 10)
+            {
+                //Peek at external flags
+                byte PeekFlags()
+                {
+                    using (loader.TemporarySeek(0xee, SeekOrigin.Begin))
+                    {
+                        return loader.ReadByte();
+                    }
+                }
+
+                var flag = (ResFile.ExternalFlags)PeekFlags();
+                if (flag.HasFlag(ResFile.ExternalFlags.HoldsExternalStrings))
+                {
+                    long externalFileOffset = loader.ReadOffset();
+                    var externalFileDict = loader.LoadDict();
+
+                    using (loader.TemporarySeek(externalFileOffset, SeekOrigin.Begin))
+                    {
+                        StringCache.Strings.Clear();
+                        foreach (string str in externalFileDict)
+                        {
+                            long stringID = loader.ReadInt64();
+                            StringCache.Strings.Add(stringID, str);
+                        }
+                    }
+                    return;
+                }
+                //GPU section for TOTK
+                if (flag.HasFlag(ResFile.ExternalFlags.HasExternalGPU))
+                {
+                    using (loader.TemporarySeek(sizFile, SeekOrigin.Begin))
+                    {
+                        uint gpuDataOffset = loader.ReadUInt32();
+                        uint gpuBufferSize = loader.ReadUInt32();
+
+                        BufferInfo = new BufferInfo();
+                        BufferInfo.BufferOffset = sizFile + 288;
+                    }
+                }
+            }
+
             long ExternalFileOffset = loader.ReadOffset();
             ExternalFileDict = loader.LoadDict();
             long padding1 = loader.ReadInt64();
@@ -405,35 +448,6 @@ namespace Syroot.NintenTools.NSW.Bfres
             ushort numExternalFile = loader.ReadUInt16();
             byte externalFlags = loader.ReadByte();
             byte reserve10 = loader.ReadByte();
-
-            //If string cache for TOTK 
-            if (externalFlags == 4)
-            {
-                using (loader.TemporarySeek(ExternalFileOffset, SeekOrigin.Begin))
-                {
-                    StringCache.Strings.Clear();
-                    foreach (var str in StringTable.Strings)
-                    {
-                        long stringID = loader.ReadInt64();
-                        StringCache.Strings.Add(stringID, str);
-                    }
-                }
-                return;
-            }
-            //GPU section for TOTK
-            if (externalFlags == 11)
-            {
-                UseExternalGPU = true;
-                using (loader.TemporarySeek(sizFile, SeekOrigin.Begin))
-                {
-                    uint gpuDataOffset = loader.ReadUInt32();
-                    uint gpuBufferSize = loader.ReadUInt32();
-
-                //    loader.Seek(gpuDataOffset, SeekOrigin.Begin);
-                    BufferInfo = new BufferInfo();
-                    BufferInfo.BufferOffset = sizFile + 288;
-                }
-            }
 
             //Now load each subfile by list. 
             Models = loader.LoadList<Model>(numModel, ModelArrayOffset);
@@ -566,6 +580,9 @@ namespace Syroot.NintenTools.NSW.Bfres
             ShapeAnimDict.Clear();
             SceneAnimDict.Clear();
 
+            if (Models.Count > 0)
+                this.MemoryPool = new MemoryPool();
+
             // Update Shape instances.
             foreach (Model model in Models)
             {
@@ -577,6 +594,8 @@ namespace Syroot.NintenTools.NSW.Bfres
                 ModelDict.Add(model.Name);
                 foreach (VertexBuffer vertexBuffer in model.VertexBuffers)
                 {
+                    vertexBuffer.MemoryPool = this.MemoryPool;
+
                     vertexBuffer.AttributeDict.Clear();
                     foreach (VertexAttrib vertexAttrib in vertexBuffer.Attributes)
                     {
@@ -585,6 +604,9 @@ namespace Syroot.NintenTools.NSW.Bfres
                 }
                 foreach (Shape shape in model.Shapes)
                 {
+                    foreach (var mesh in shape.Meshes)
+                        mesh.MemoryPool = this.MemoryPool;
+
                     model.ShapeDict.Add(shape.Name);
                     shape.VertexBuffer = model.VertexBuffers[shape.VertexBufferIndex];
                 }

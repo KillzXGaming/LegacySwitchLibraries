@@ -307,13 +307,16 @@ namespace Syroot.NintenTools.NSW.Bfres
             }
 
             Shapes = loader.LoadList<Shape>(numShape, ShapeArrayOffset);
+
+            //Load and setup shader assigns first before materials
             ShaderAssign = loader.LoadList<MaterialParserV10.ShaderAssignV10>(ShaderAssignCount, ShaderAssignOffset);
+            //Attach a binding tag for info on model reference
+            foreach (var assign in ShaderAssign)
+                assign.IsAnimationBinded = true;
+
             Materials = loader.LoadList<Material>(numMaterial, MaterialArrayOffset);
             UserData = loader.LoadList<UserData>(numUserData, UserDataOffset);
             VertexBuffers = loader.LoadList<VertexBuffer>(numVertexBuffer, VertexArrayOffset);
-
-            foreach (var assign in ShaderAssign)
-                assign.IsAnimationBinded = true;
         }
 
         internal long SkeletonOffset;
@@ -331,7 +334,12 @@ namespace Syroot.NintenTools.NSW.Bfres
             //Add all shader assign that is bindable
             if (saver.ResFile.VersionMajor2 >= 10)
             {
-                var shaderAssignList = this.Materials.Where(x => x.ShaderAssign.IsAnimationBinded).Select(x => (MaterialParserV10.ShaderAssignV10)x.ShaderAssign);
+                foreach (var mat in this.Materials)
+                    MaterialParserV10.PrepareSave(mat);
+
+                var shaderAssignList = this.Materials.Where(x => x.ShaderInfoV10 != null && x.ShaderInfoV10.ShaderAssign.IsAnimationBinded).
+                    Select(x => (x.ShaderInfoV10.ShaderAssign));
+
                 this.ShaderAssign = shaderAssignList.ToList();
             }
 

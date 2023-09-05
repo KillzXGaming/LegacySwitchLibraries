@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using Syroot.NintenTools.NSW.Bfres.Core;
 using System.Linq;
+using static Syroot.NintenTools.NSW.Bfres.MaterialParserV10;
 
 namespace Syroot.NintenTools.NSW.Bfres
 {
@@ -118,6 +119,9 @@ namespace Syroot.NintenTools.NSW.Bfres
         public List<RenderInfo> RenderInfos { get; set; }
 
         public ShaderAssign ShaderAssign { get; set; }
+
+
+        internal ShaderInfo ShaderInfoV10 = new ShaderInfo();
 
         /// <summary>
         /// Gets or sets the list of <see cref="string"/> instances referencing the <see cref="Texture"/> instances
