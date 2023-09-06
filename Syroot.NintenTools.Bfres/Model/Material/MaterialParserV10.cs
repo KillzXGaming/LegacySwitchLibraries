@@ -8,7 +8,7 @@ namespace Syroot.NintenTools.NSW.Bfres
 {
     public class MaterialParserV10
     {
-        public static void PrepareSave(Material mat)
+        public static void PrepareSave(Material mat, IList<Material> materialList)
         {
             var info = new ShaderInfo();
 
@@ -151,7 +151,6 @@ namespace Syroot.NintenTools.NSW.Bfres
             {
                 ShaderArchiveName = info.ShaderAssign.ShaderArchiveName,
                 ShadingModelName = info.ShaderAssign.ShadingModelName,
-                IsAnimationBinded = info.ShaderAssign.IsAnimationBinded,
             };
             mat.ShaderParamData = loader.LoadCustom(() => loader.ReadBytes(info.ShaderAssign.ShaderParamSize), (uint)SourceParamOffset);
             mat.ParamIndices = loader.LoadCustom(() => loader.ReadInt32s(info.ShaderAssign.ShaderParameters.Count), (uint)SourceParamIndices);
@@ -551,8 +550,6 @@ namespace Syroot.NintenTools.NSW.Bfres
 
             public Material ParentMaterial;
 
-            internal bool IsAnimationBinded = false;
-
             void IResData.Load(ResFileLoader loader)
             {
                 ShaderArchiveName = loader.LoadString();
@@ -617,6 +614,33 @@ namespace Syroot.NintenTools.NSW.Bfres
                 saver.Write((ushort)ParentMaterial.ShaderParamData.Length);
                 saver.Write((ushort)0);//padding
                 saver.Write(0UL);//padding
+            }
+
+            public override int GetHashCode()
+            {
+                int hash = 0;
+                hash += ShaderArchiveName.GetHashCode();
+                hash += ShadingModelName.GetHashCode();
+
+                foreach (var renderInfo in ParentMaterial.RenderInfos)
+                {
+                    hash += renderInfo.Name.GetHashCode();
+                    hash += renderInfo.Type.GetHashCode();
+                }
+                foreach (var p in ParentMaterial.ShaderParams)
+                {
+                    hash += p.Name.GetHashCode();
+                    hash += p.DataOffset.GetHashCode();
+                    hash += p.Type.GetHashCode();
+                }
+                foreach (var op in Options)
+                    hash += op.GetHashCode();
+                foreach (var att in AttributeAssign)
+                    hash += att.GetHashCode();
+                foreach (var samp in SamplerAssign)
+                    hash += samp.GetHashCode();
+
+                return hash;
             }
         }
     }

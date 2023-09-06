@@ -409,6 +409,8 @@ namespace Syroot.NintenTools.NSW.Bfres
                 //GPU section for TOTK
                 if (flag.HasFlag(ResFile.ExternalFlags.HasExternalGPU))
                 {
+                    DataAlignmentOverride = 0x1000;
+
                     using (loader.TemporarySeek(sizFile, SeekOrigin.Begin))
                     {
                         uint gpuDataOffset = loader.ReadUInt32();
@@ -448,6 +450,11 @@ namespace Syroot.NintenTools.NSW.Bfres
             ushort numExternalFile = loader.ReadUInt16();
             byte externalFlags = loader.ReadByte();
             byte reserve10 = loader.ReadByte();
+
+            if (reserve10 == 1)
+            {
+                DataAlignmentOverride = 0x1000;
+            }
 
             //Now load each subfile by list. 
             Models = loader.LoadList<Model>(numModel, ModelArrayOffset);
@@ -558,7 +565,10 @@ namespace Syroot.NintenTools.NSW.Bfres
             saver.Write((ushort)ExternalFileDict.Count);
 
             if (saver.ResFile.VersionMajor2 >= 9)
-                saver.Seek(2); // padding
+            {
+                saver.Write((byte)0); //external flags (set to 0)
+                saver.Write((byte)1); //saved flags
+            }
             else
                 saver.Seek(6); // padding
         }

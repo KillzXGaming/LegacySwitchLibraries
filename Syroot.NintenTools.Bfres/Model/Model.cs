@@ -310,9 +310,6 @@ namespace Syroot.NintenTools.NSW.Bfres
 
             //Load and setup shader assigns first before materials
             ShaderAssign = loader.LoadList<MaterialParserV10.ShaderAssignV10>(ShaderAssignCount, ShaderAssignOffset);
-            //Attach a binding tag for info on model reference
-            foreach (var assign in ShaderAssign)
-                assign.IsAnimationBinded = true;
 
             Materials = loader.LoadList<Material>(numMaterial, MaterialArrayOffset);
             UserData = loader.LoadList<UserData>(numUserData, UserDataOffset);
@@ -335,12 +332,12 @@ namespace Syroot.NintenTools.NSW.Bfres
             if (saver.ResFile.VersionMajor2 >= 10)
             {
                 foreach (var mat in this.Materials)
-                    MaterialParserV10.PrepareSave(mat);
+                    MaterialParserV10.PrepareSave(mat, Materials);
 
-                var shaderAssignList = this.Materials.Where(x => x.ShaderInfoV10 != null && x.ShaderInfoV10.ShaderAssign.IsAnimationBinded).
-                    Select(x => (x.ShaderInfoV10.ShaderAssign));
-
-                this.ShaderAssign = shaderAssignList.ToList();
+                //Get all the shader assigns
+                var list = this.Materials.Select(x => x.ShaderInfoV10.ShaderAssign);
+                //trim via hash
+                this.ShaderAssign = list.GroupBy(x => x.GetHashCode()).Select(g => g.First()).ToList();
             }
 
             saver.WriteSignature(_signature);

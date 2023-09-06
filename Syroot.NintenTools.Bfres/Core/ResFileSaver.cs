@@ -2266,7 +2266,7 @@ namespace Syroot.NintenTools.NSW.Bfres.Core
         private void WriteMemoryPool()
         {
             long oldPos = Position;
-            Align(ResFile.DataAlignment);
+            Align((int)ResFile.DataAlignmentOverride != 0 ? (int)ResFile.DataAlignmentOverride : ResFile.DataAlignment);
 
             WriteTotalBufferSize(Position); //Write the total buffer size after memory pool is aligned
 
@@ -2294,6 +2294,8 @@ namespace Syroot.NintenTools.NSW.Bfres.Core
         uint SectionCount = 5;
         private void WriteRelocationTable()
         {
+            Align(256);
+
             uint relocationTableOffset = (uint)Position;
             WriteSignature("_RLT");
             _ofsEndOfBlock = (uint)Position;
