@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using Syroot.NintenTools.NSW.Bfres.Core;
 using System.Linq;
+using System;
 
 namespace Syroot.NintenTools.NSW.Bfres
 {
@@ -332,12 +333,23 @@ namespace Syroot.NintenTools.NSW.Bfres
             if (saver.ResFile.VersionMajor2 >= 10)
             {
                 foreach (var mat in this.Materials)
-                    MaterialParserV10.PrepareSave(mat, Materials);
+                    MaterialParserV10.PrepareSave(mat);
 
                 //Get all the shader assigns
-                var list = this.Materials.Select(x => x.ShaderInfoV10.ShaderAssign);
+                var list = this.Materials.Select(x => x.ShaderInfoV10.ShaderAssign).Distinct();
                 //trim via hash
                 this.ShaderAssign = list.GroupBy(x => x.GetHashCode()).Select(g => g.First()).ToList();
+                //assign each material shader assign instance
+                foreach (var mat in this.Materials)
+                {
+                    foreach (var assign in this.ShaderAssign)
+                    {
+                        if (assign.GetHashCode() == mat.ShaderInfoV10.ShaderAssign.GetHashCode())
+                        {
+                            mat.ShaderInfoV10.ShaderAssign = assign;
+                        }
+                    }
+                }
             }
 
             saver.WriteSignature(_signature);

@@ -231,7 +231,6 @@ namespace Syroot.NintenTools.NSW.Bfres
             VertexBufferSizeArray = loader.LoadList<VertexBufferSize>(numBuffer, VertexBufferSizeOffset);
             Attributes            = loader.LoadList<VertexAttrib>(numVertexAttrib, ofsVertexAttribList);
 
-            //Extreemly hacky atm. Wil redo
             Buffers = new List<buffData>();
             using (loader.TemporarySeek(BufferInfo.BufferOffset + BufferOffset, SeekOrigin.Begin))
             {

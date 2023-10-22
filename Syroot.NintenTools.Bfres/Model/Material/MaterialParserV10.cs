@@ -3,12 +3,13 @@ using System.IO;
 using System.Collections.Generic;
 using System.Linq;
 using Syroot.NintenTools.NSW.Bfres.Core;
+using System.Reflection;
 
 namespace Syroot.NintenTools.NSW.Bfres
 {
     public class MaterialParserV10
     {
-        public static void PrepareSave(Material mat, IList<Material> materialList)
+        public static void PrepareSave(Material mat)
         {
             var info = new ShaderInfo();
 
@@ -66,7 +67,8 @@ namespace Syroot.NintenTools.NSW.Bfres
 
                     if (op == "True") toggles.Add(true);
                     else if (op == "False") toggles.Add(false);
-                    else info.OptionValues.Add(op);
+                    else 
+                        info.OptionValues.Add(op);
 
                     optionChoiceIndices.Add((short)choiceIdx);
                     choiceIdx++;
@@ -109,6 +111,7 @@ namespace Syroot.NintenTools.NSW.Bfres
 
             //First change is a new struct with shader assign + tables for shader assign data
             var info = loader.Load<ShaderInfo>();
+
             long TextureArrayOffset = loader.ReadOffset();
             long TextureNameArray = loader.ReadOffset();
             long SamplerArrayOffset = loader.ReadOffset();
@@ -146,6 +149,9 @@ namespace Syroot.NintenTools.NSW.Bfres
 
             mat.TextureSlotArray = loader.LoadCustom(() => loader.ReadInt64s(numTextureRef), (uint)TexSlotArrayOffset);
             mat.SamplerSlotArray = loader.LoadCustom(() => loader.ReadInt64s(numSampler), (uint)SamplerSlotArrayOffset);
+
+            if (info == null)
+                return;
 
             mat.ShaderAssign = new ShaderAssign()
             {
@@ -366,7 +372,6 @@ namespace Syroot.NintenTools.NSW.Bfres
 
             saver.SaveRelocateEntryToSection(saver.Position, 3, 1, 0, ResFileSaver.Section1, "FMAT User Data");
 
-
             mat.PosUserDataMaterialOffset = saver.SaveOffset();
             mat.PosUserDataDictMaterialOffset = saver.SaveOffset();
 
@@ -403,7 +408,7 @@ namespace Syroot.NintenTools.NSW.Bfres
             public sbyte[] AttributeAssignIndices;
             public sbyte[] SamplerAssignIndices;
 
-            private long _optionBitFlags;
+            private long[] _optionBitFlags;
 
             void IResData.Load(ResFileLoader loader)
             {
@@ -423,9 +428,11 @@ namespace Syroot.NintenTools.NSW.Bfres
                 loader.ReadUInt16(); //padding
                 loader.ReadUInt32(); //padding
 
+                var numBitflags = 1 + shaderOptionBooleanCount / 64;
+
                 AttribAssigns = loader.LoadCustom(() => loader.LoadStrings(numAttributeAssign), (uint)attribAssignOffset);
                 SamplerAssigns = loader.LoadCustom(() => loader.LoadStrings(numSamplerAssign), (uint)samplerAssignOffset);
-                _optionBitFlags = loader.LoadCustom(() => loader.ReadInt64(), (uint)optionChoiceToggleOffset);
+                _optionBitFlags = loader.LoadCustom(() => loader.ReadInt64s(numBitflags), (uint)optionChoiceToggleOffset);
 
                 OptionIndices = ReadShortIndices(loader, optionChoiceIndicesOffset, shaderOptionChoiceCount, ShaderAssign.Options.Count);
                 AttributeAssignIndices = ReadByteIndices(loader, attribAssignIndicesOffset, numAttributeAssign, ShaderAssign.AttributeAssign.Count);
@@ -486,23 +493,38 @@ namespace Syroot.NintenTools.NSW.Bfres
             private void SetupOptionBooleans(int count)
             {
                 OptionToggles = new bool[count];
+
+                var flags = _optionBitFlags.ToArray();
+
+                int idx = 0;
                 for (int i = 0; i < count; i++)
                 {
-                    bool set = (_optionBitFlags & 0x1) != 0;
-                    _optionBitFlags >>= 1;
+                    if (i != 0 && i % 64 == 0)
+                        idx++;
 
-                    OptionToggles[i] = set;
+                    OptionToggles[i] = (_optionBitFlags[idx] & ((long)1 << i)) != 0;
                 }
+
+                CreateOptionFlag();
+
+                for (int i = 0; i < _optionBitFlags.Length; i++)
+                    if (_optionBitFlags[i] != flags[i])
+                        throw new Exception();
             }
 
             private void CreateOptionFlag()
             {
-                _optionBitFlags = 0;
+                var numBitflags = 1 + OptionToggles.Length / 64;
+                _optionBitFlags = new long[numBitflags];
 
+                int idx = 0;
                 for (int i = 0; i < OptionToggles.Length; i++)
                 {
+                    if (i != 0 && i % 64 == 0)
+                        idx++;
+
                     if (OptionToggles[i])
-                        _optionBitFlags |= (1u << i);
+                        _optionBitFlags[idx] |= ((long)1 << i);
                 }
             }
 
