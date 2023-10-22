@@ -401,14 +401,14 @@ namespace Syroot.NintenTools.NSW.Bfres
             public IList<string> AttribAssigns;
             public IList<string> SamplerAssigns;
 
-            public bool[] OptionToggles;
+            public bool[] OptionToggles = new bool[0];
             public IList<string> OptionValues;
 
             public short[] OptionIndices;
             public sbyte[] AttributeAssignIndices;
             public sbyte[] SamplerAssignIndices;
 
-            private long[] _optionBitFlags;
+            private long[] _optionBitFlags = new long[0];
 
             void IResData.Load(ResFileLoader loader)
             {
