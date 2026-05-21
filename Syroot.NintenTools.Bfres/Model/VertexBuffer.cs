@@ -80,6 +80,11 @@ namespace Syroot.NintenTools.NSW.Bfres
         /// </summary>
         public uint VertexCount;
 
+        /// <summary>
+        /// 
+        /// </summary>
+        public uint GPUBufferAlignent { get; set; } = 8;
+
         public uint GetTotalBufferSize()
         {
             uint TotalSize = 0;
@@ -190,8 +195,6 @@ namespace Syroot.NintenTools.NSW.Bfres
             public byte[] Data;
 
         }
-
-        private uint GPUBufferAlignent = 8;
 
         // ---- METHODS ------------------------------------------------------------------------------------------------
 

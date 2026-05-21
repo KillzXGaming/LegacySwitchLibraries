@@ -1,6 +1,7 @@
-﻿using System.Collections.Generic;
-using Syroot.Maths;
+﻿using Syroot.Maths;
 using Syroot.NintenTools.NSW.Bfres.Core;
+using System;
+using System.Collections.Generic;
 
 namespace Syroot.NintenTools.NSW.Bfres
 {
@@ -20,10 +21,11 @@ namespace Syroot.NintenTools.NSW.Bfres
             {
                 foreach (Shape shp in fmdl.Shapes)
                 {
+                    uint align = fmdl.VertexBuffers[shp.VertexBufferIndex].GPUBufferAlignent;
                     foreach (Mesh msh in shp.Meshes)
                     {
                         Size += (uint)msh.Data.Length;
-                        if (Size % 8 != 0) Size = Size + (8 - (Size % 8));
+                        if (Size % align != 0) Size = Size + (align - (Size % align));
                     }
                 }
             }
@@ -34,25 +36,15 @@ namespace Syroot.NintenTools.NSW.Bfres
         {
             uint Size = 0;
 
-            //Add all buffer byte[] to a list
-
-            if (saver.Shape != null)
-            {
-                foreach (VertexBuffer.buffData buff in saver.Shape.VertexBuffer.Buffers)
-                {
-                    Size += (uint)buff.Data.Length;
-                    if (Size % 8 != 0) Size = Size + (8 - (Size % 8));
-                }
-                return Size;
-            }
             foreach (Model fmdl in saver.ResFile.Models)
             {
                 foreach (VertexBuffer vtx in fmdl.VertexBuffers)
                 {
+                    uint align = vtx.GPUBufferAlignent;
                     foreach (VertexBuffer.buffData buff in vtx.Buffers)
                     {
                         Size += (uint)buff.Data.Length;
-                        if (Size % 8 != 0) Size = Size + (8 - (Size % 8));
+                        if (Size % align != 0) Size = Size + (align - (Size % align));
                     }
                 }
             }
@@ -61,32 +53,21 @@ namespace Syroot.NintenTools.NSW.Bfres
 
 
         private void SetIndexBufferData(ResFileSaver saver)
-       {
+        {
             List<byte[]> IndxBuffList = new List<byte[]>();
 
-            if (saver.Shape != null)
+            //Add all buffer byte[] to a list
+            foreach (Model fmdl in saver.ResFile.Models)
             {
-                foreach (Mesh msh in saver.Shape.Meshes)
+                foreach (Shape shp in fmdl.Shapes)
                 {
-                    IndxBuffList.Add(msh.Data);
-                }
-            }
-            else
-            {
-                //Add all buffer byte[] to a list
-                foreach (Model fmdl in saver.ResFile.Models)
-                {
-                    foreach (Shape shp in fmdl.Shapes)
+                    foreach (Mesh msh in shp.Meshes)
                     {
-                        foreach (Mesh msh in shp.Meshes)
-                        {
-                            IndxBuffList.Add(msh.Data);
-                        }
+                        IndxBuffList.Add(msh.Data);
                     }
                 }
             }
 
-          
             IndexBufferData = new byte[IndxBuffList.Count][];
 
             for (int i = 0; i < IndxBuffList.Count; i++)
@@ -99,36 +80,26 @@ namespace Syroot.NintenTools.NSW.Bfres
         private void SetVertexBufferData(ResFileSaver saver)
         {
             List<byte[]> VtxBuffList = new List<byte[]>();
+            List<int> VtxAlignList = new List<int>();
 
-            if (saver.Shape != null)
+            foreach (Model fmdl in saver.ResFile.Models)
             {
-                foreach (VertexBuffer.buffData buff in saver.Shape.VertexBuffer.Buffers)
+                foreach (VertexBuffer vtx in fmdl.VertexBuffers)
                 {
-                    VtxBuffList.Add(buff.Data);
-                }
-            }
-            else
-            {
-                foreach (Model fmdl in saver.ResFile.Models)
-                {
-                    foreach (VertexBuffer vtx in fmdl.VertexBuffers)
+                    foreach (var buff in vtx.Buffers)
                     {
-                        foreach (VertexBuffer.buffData buff in vtx.Buffers)
-                        {
-                            VtxBuffList.Add(buff.Data);
-                        }
+                        VtxBuffList.Add(buff.Data);
+                        VtxAlignList.Add((int)vtx.GPUBufferAlignent);
                     }
                 }
             }
 
             //Add all buffer byte[] to a list
-         
-            VertexBufferData = new byte[VtxBuffList.Count][];
 
-            for (int i = 0; i < VtxBuffList.Count; i++)
-            {
-                VertexBufferData[i] = VtxBuffList[i];
-            }
+            VertexAlignments = VtxAlignList.ToArray();
+            VertexBufferData = VtxBuffList.ToArray();
+
+            VtxAlignList.Clear();
             VtxBuffList.Clear();
         }
 
@@ -150,18 +121,23 @@ namespace Syroot.NintenTools.NSW.Bfres
         public byte[][] IndexBufferData { get; set; }
 
         /// <summary>
+        /// 
+        /// </summary>
+        public int[] VertexAlignments { get; set; }
+
+        /// <summary>
         /// Gets or sets an unkown value
         /// </summary>
-        public uint unk { get; set; }
+        public uint unk { get; set; } = 34;
 
         // ---- METHODS ------------------------------------------------------------------------------------------------
 
         void IResData.Load(ResFileLoader loader)
         {
-            unk                 = loader.ReadUInt32();
-            uint Size           = loader.ReadUInt32();
-            BufferOffset        = loader.ReadInt64();
-            byte[] padding      = loader.ReadBytes(16);
+            unk = loader.ReadUInt32();
+            uint Size = loader.ReadUInt32();
+            BufferOffset = loader.ReadInt64();
+            byte[] padding = loader.ReadBytes(16);
         }
 
         void IResData.Save(ResFileSaver saver)
@@ -178,9 +154,8 @@ namespace Syroot.NintenTools.NSW.Bfres
 
             if (BufferTotalSize % saver.ResFile.Alignment != 0) BufferTotalSize = BufferTotalSize + (saver.ResFile.Alignment - (BufferTotalSize % saver.ResFile.Alignment));
 
-            
             saver.SaveBufferTotalSize();
-            saver.SaveRelocateEntryToSection(saver.Position, 1, 1, 0, ResFileSaver.Section2, "Buffer Data"); //      <------------ Entry Set
+            saver.SaveRelocateEntryToSection(saver.Position, 1, 1, 0, ResFileSaver.Section2, "Buffer Data");
             saver.SaveIndexBufferPointer();
             saver.Seek(16);
         }
