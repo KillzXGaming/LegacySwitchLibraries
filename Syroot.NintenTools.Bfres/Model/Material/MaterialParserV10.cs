@@ -428,7 +428,7 @@ namespace Syroot.NintenTools.NSW.Bfres
                 loader.ReadUInt16(); //padding
                 loader.ReadUInt32(); //padding
 
-                var numBitflags = 1 + shaderOptionBooleanCount / 64;
+                var numBitflags = 1 + (shaderOptionBooleanCount - 1) / 64;
 
                 AttribAssigns = loader.LoadCustom(() => loader.LoadStrings(numAttributeAssign), (uint)attribAssignOffset);
                 SamplerAssigns = loader.LoadCustom(() => loader.LoadStrings(numSamplerAssign), (uint)samplerAssignOffset);
@@ -514,7 +514,7 @@ namespace Syroot.NintenTools.NSW.Bfres
 
             private void CreateOptionFlag()
             {
-                var numBitflags = 1 + OptionToggles.Length / 64;
+                var numBitflags = 1 + (OptionToggles.Length - 1)/ 64;
                 _optionBitFlags = new long[numBitflags];
 
                 int idx = 0;
