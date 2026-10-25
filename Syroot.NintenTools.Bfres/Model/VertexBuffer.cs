@@ -243,7 +243,7 @@ namespace Syroot.NintenTools.NSW.Bfres
                     buffer.buffSize = (int)VertexBufferSizeArray[buff].Size;
                     buffer.Stride = (int)StrideArray[buff].Stride;
 
-                    loader.Align(8);
+                    loader.Align((int)GPUBufferAlignent);
                     buffer.Data = loader.ReadBytes(buffer.buffSize);
                     Buffers.Add(buffer);
                 }
