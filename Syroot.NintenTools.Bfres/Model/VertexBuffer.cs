@@ -223,7 +223,10 @@ namespace Syroot.NintenTools.NSW.Bfres
             ushort Idx                  = loader.ReadUInt16();
             VertexCount                 = loader.ReadUInt32();
             VertexSkinCount = loader.ReadUInt16();
-            GPUBufferAlignent = loader.ReadUInt16();
+            if (loader.ResFile.VersionMajor2 >= 10)
+                GPUBufferAlignent = loader.ReadUInt16();
+            else
+                loader.ReadUInt16();
 
             //So buffers work like this
             //They grab the index buffer offset from memory info section
