@@ -202,6 +202,10 @@ namespace Syroot.NintenTools.NSW.Bfres
 
         void IResData.Load(ResFileLoader loader)
         {
+            // Empty magic, skip
+            if (loader.PeekChar() == 0)
+                return;
+
             loader.CheckSignature(_signature);
             if (loader.ResFile.VersionMajor2 >= 9)
                 UnknownFlag = loader.ReadUInt32(); 

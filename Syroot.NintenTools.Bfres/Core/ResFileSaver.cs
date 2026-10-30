@@ -2382,7 +2382,7 @@ namespace Syroot.NintenTools.NSW.Bfres.Core
 
             WriteSignature("_STR");
             SaveHeaderBlock();
-            Write(sorted.Count);
+            Write(System.Math.Max(sorted.Count - 1, 0));
 
             uint stringPoolOffset = (uint)Position;
 

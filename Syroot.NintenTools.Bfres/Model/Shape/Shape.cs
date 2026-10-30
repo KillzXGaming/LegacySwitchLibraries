@@ -284,7 +284,11 @@ namespace Syroot.NintenTools.NSW.Bfres
                 loader.LoadHeaderBlock();
 
             Name = loader.LoadString();
-            VertexBuffer = loader.Load<VertexBuffer>();
+            if (Flags.HasFlag(ShapeFlags.HasVertexBuffer))
+                VertexBuffer = loader.Load<VertexBuffer>();
+            else
+                loader.ReadOffset();
+
             long MeshArrayOffset = loader.ReadOffset();
             long SkinBoneIndexListOffset = loader.ReadOffset();
             long KeyShapesArrayOffset = loader.ReadOffset();
@@ -423,14 +427,10 @@ namespace Syroot.NintenTools.NSW.Bfres
     [Flags]
     public enum ShapeFlags : uint
     {
-        /// <summary>
-        /// The <see cref="Shape"/> instance references a <see cref="VertexBuffer"/>.
-        /// </summary>
-        HasVertexBuffer = 1 << 1,
-
-        /// <summary>
-        /// The boundings in all submeshes are consistent.
-        /// </summary>
-        SubMeshBoundaryConsistent = 1 << 2
+        None = 0,
+        SubMeshBoundaryConsistent = 1 << 1,
+        HasVertexBuffer = 1 << 2,
+        IsSkipSetupIndexBuffers = 1 << 3,
+        IsMeshlet = 1 << 4,
     }
 }
