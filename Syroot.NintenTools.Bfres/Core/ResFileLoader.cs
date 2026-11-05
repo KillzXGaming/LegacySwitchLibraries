@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
@@ -475,12 +475,49 @@ namespace Syroot.NintenTools.NSW.Bfres.Core
             if (StringCache.Strings.ContainsKey(offset))
                 return StringCache.Strings[offset];
 
+            if (IsUnresolvedExternalStringID(offset))
+                return HandleUnresolvedExternalString(offset);
+
             encoding = encoding ?? Encoding;
             using (TemporarySeek(offset, SeekOrigin.Begin))
             {
                 short size = ReadInt16();
                 return ReadString(BinaryStringFormat.ZeroTerminated, encoding);
             }
+        }
+
+        /// <summary>
+        /// Gets or sets whether the file being loaded stores some names as 64-bit IDs into an external string table
+        /// (<see cref="ResFile.ExternalFlags.HasExternalString"/>) instead of offsets into its own string pool.
+        /// The IDs are resolved through <see cref="StringCache"/>, which is filled by loading the game's
+        /// ExternalBinaryString.bfres (a file flagged <see cref="ResFile.ExternalFlags.HoldsExternalStrings"/>).
+        /// </summary>
+        internal bool UsesExternalStrings { get; set; }
+
+        /// <summary>
+        /// A string field of a file using external strings holds an ID rather than an offset when the value cannot
+        /// be a position inside the file. Real offsets always point inside the file, so this never misclassifies one.
+        /// </summary>
+        private bool IsUnresolvedExternalStringID(long value)
+        {
+            return UsesExternalStrings && (value < 0 || value >= BaseStream.Length);
+        }
+
+        private string HandleUnresolvedExternalString(long id)
+        {
+            if (StringCache.Strings.Count == 0)
+            {
+                throw new ResException(
+                    $"This BFRES stores names as external string IDs (e.g. 0x{id:X16}), but no external string " +
+                    "table is loaded. Load the game's Shader/ExternalBinaryString.bfres (.zs or .mc) first; it must " +
+                    "come from the same game as this file.");
+            }
+
+            // The table is loaded but does not contain this ID. Keep loading, but record the ID and use a placeholder
+            // that makes the unresolved name obvious instead of seeking to a bogus offset.
+            if (!ResFile.UnresolvedExternalStringIDs.Contains(id))
+                ResFile.UnresolvedExternalStringIDs.Add(id);
+            return $"ExtStr_{id:X16}";
         }
         internal void LoadHeaderBlock()
         {
@@ -520,6 +557,10 @@ namespace Syroot.NintenTools.NSW.Bfres.Core
                     if (StringCache.Strings.ContainsKey(offset))
                     {
                         names[i] = StringCache.Strings[offset];
+                    }
+                    else if (IsUnresolvedExternalStringID(offset))
+                    {
+                        names[i] = HandleUnresolvedExternalString(offset);
                     }
                     else
                     {
