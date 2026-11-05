@@ -1,4 +1,4 @@
-﻿using System.Diagnostics;
+using System.Diagnostics;
 using System.Collections.Generic;
 using System.IO;
 using System.ComponentModel;
@@ -334,6 +334,20 @@ namespace Syroot.NintenTools.NSW.Bfres
 
         public static bool UseExternalGPU = false;
 
+        /// <summary>
+        /// Gets whether this file stores names as IDs into an external string table
+        /// (<see cref="ExternalFlags.HasExternalString"/>, used by TOTK and later ModuleSystem titles).
+        /// </summary>
+        [Browsable(false)]
+        public bool UsesExternalStrings { get; private set; }
+
+        /// <summary>
+        /// External string IDs referenced by this file that were not present in the loaded
+        /// <see cref="StringCache"/>. Names using them were loaded as "ExtStr_&lt;ID&gt;" placeholders.
+        /// </summary>
+        [Browsable(false)]
+        public List<long> UnresolvedExternalStringIDs { get; } = new List<long>();
+
         // ---- METHODS ------------------------------------------------------------------------------------------------
 
         void IResData.Load(ResFileLoader loader)
@@ -342,6 +356,18 @@ namespace Syroot.NintenTools.NSW.Bfres
             uint padding = loader.ReadUInt32();
             Version = loader.ReadUInt32();
             SetVersionInfo(Version);
+
+            // External string IDs can appear in any name field, so detect them before the first string is read.
+            if (VersionMajor2 >= 10 && loader.BaseStream.Length > 0xEE)
+            {
+                using (loader.TemporarySeek(0xEE, SeekOrigin.Begin))
+                {
+                    var headerExternalFlags = (ExternalFlags)loader.ReadByte();
+                    UsesExternalStrings = headerExternalFlags.HasFlag(ExternalFlags.HasExternalString);
+                }
+            }
+            loader.UsesExternalStrings = UsesExternalStrings;
+
             ByteOrder = loader.ReadEnum<ByteOrder>(false);
             Alignment = loader.ReadByte();
             TargetAddressSize = loader.ReadByte(); //Thanks MasterF0X for pointing out the layout of the these
