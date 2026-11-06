@@ -96,13 +96,11 @@ namespace Syroot.NintenTools.NSW.Bfres
         }
 
         public uint SetVertexBufferArrayOffset(ResFileSaver saver)
-        {
+        {          
             //Add all previous buffers until it reaches current one
             //This adds all face buffers (those goes first) then the vertex ones
 
-            uint Pos = (uint)BufferInfo.BufferOffset;
-
-            uint TotalSize = Pos;
+            uint TotalSize = 0;
 
             if (saver.Shape != null)
             {
@@ -111,7 +109,7 @@ namespace Syroot.NintenTools.NSW.Bfres
                     if (TotalSize % 8 != 0) TotalSize = TotalSize + (8 - (TotalSize % 8));
                     TotalSize += (uint)msh.Data.Length;
                 }
-                return TotalSize - Pos;
+                return TotalSize;
             }
 
             foreach (Model fmdl in saver.ResFile.Models)
@@ -129,18 +127,17 @@ namespace Syroot.NintenTools.NSW.Bfres
             {
                 foreach (VertexBuffer vtx in fmdl.VertexBuffers)
                 {
+                    uint align = vtx.GPUBufferAlignent == 0 ? 8 : vtx.GPUBufferAlignent;
                     foreach (buffData buff in vtx.Buffers)
                     {
-                        if (TotalSize % 8 != 0) TotalSize = TotalSize + (8 - (TotalSize % 8));
+                        if (TotalSize % align != 0) TotalSize = TotalSize + (align - (TotalSize % align));
                         if (vtx == this)
-                            return TotalSize - Pos;
+                            return TotalSize;
 
                         TotalSize += (uint)buff.Data.Length;
                     }
                 }
             }
-
-            TotalSize = TotalSize - Pos;
 
             return TotalSize;
         }
