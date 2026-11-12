@@ -252,6 +252,8 @@ namespace Syroot.NintenTools.NSW.Bfres
 
         void IResData.Save(ResFileSaver saver)
         {
+            MaterialParserV10.PrepareSave(this);
+
             if (VolatileFlags == null)
                 VolatileFlags = new byte[0];
             if (TextureRefs == null)

@@ -493,7 +493,8 @@ namespace Syroot.NintenTools.NSW.Bfres
             private void SetupOptionBooleans(int count)
             {
                 OptionToggles = new bool[count];
-                if (_optionBitFlags == null) return;
+                if (_optionBitFlags == null)
+                    _optionBitFlags = new long[Math.Max(1, 1 + (count - 1) / 64)];
 
                 var flags = _optionBitFlags.ToArray();
 
